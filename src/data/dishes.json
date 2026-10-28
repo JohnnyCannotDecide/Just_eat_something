@@ -1,0 +1,1994 @@
+{
+  "_comment": "UR 菜品为占位彩蛋（与热量无关），可手动替换为其他放纵系/趣味菜；替换时保持 3 道即可。菜品热量由 ingredients 克数实时计算，不在此文件手填。",
+  "dishes": [
+    {
+      "id": "white_rice",
+      "name": "白米饭",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/white_rice.png",
+      "tip": "朴素但可靠的碳水老朋友。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 25,
+        "steps": [
+          "大米淘洗两遍，加适量清水",
+          "电饭煲按下煮饭键，约25分钟",
+          "跳闸后焖10分钟再盛出"
+        ]
+      }
+    },
+    {
+      "id": "steamed_sweet_potato",
+      "name": "蒸红薯",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast",
+        "lunch"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "sweet_potato",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/steamed_sweet_potato.png",
+      "tip": "热乎乎的甜，捧在手心刚刚好。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 25,
+        "steps": [
+          "红薯刷洗干净，不用去皮",
+          "水开后上锅，中火蒸20分钟",
+          "筷子能轻松扎透即可"
+        ]
+      }
+    },
+    {
+      "id": "boiled_egg",
+      "name": "水煮蛋",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "breakfast",
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "egg",
+          "grams": 120
+        }
+      ],
+      "image": "/images/dishes/boiled_egg.png",
+      "tip": "剥开壳的那一刻，今天也有好好照顾自己。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 8,
+        "steps": [
+          "鸡蛋冷水下锅，水要没过蛋",
+          "水开后转中小火煮8分钟",
+          "煮至蛋黄完全熟透再捞出"
+        ]
+      }
+    },
+    {
+      "id": "oatmeal_milk",
+      "name": "燕麦牛奶粥",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "oats",
+          "grams": 40
+        },
+        {
+          "ingredientId": "milk",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/oatmeal_milk.png",
+      "tip": "软绵绵的一碗，胃先醒来。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 10,
+        "steps": [
+          "燕麦片倒入小锅，加入牛奶",
+          "小火边煮边搅拌约3分钟",
+          "关火焖2分钟，温热食用"
+        ]
+      }
+    },
+    {
+      "id": "whole_wheat_toast",
+      "name": "全麦吐司",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "whole_wheat_bread",
+          "grams": 80
+        }
+      ],
+      "image": "/images/dishes/whole_wheat_toast.png",
+      "tip": "烤到微微焦香，配什么都温柔。",
+      "cooking": {
+        "method": "烤",
+        "timeMinutes": 3,
+        "steps": [
+          "吐司片放入烤箱或面包机",
+          "烤至表面微焦，约2分钟",
+          "取出后搭配果酱食用"
+        ]
+      }
+    },
+    {
+      "id": "steamed_corn",
+      "name": "蒸玉米",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast",
+        "lunch"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "corn",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/steamed_corn.png",
+      "tip": "一粒一粒啃掉的快乐。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 20,
+        "steps": [
+          "玉米剥去外皮，保留一层薄衣",
+          "水开后上锅蒸20分钟",
+          "蒸到玉米粒饱满熟透"
+        ]
+      }
+    },
+    {
+      "id": "plain_noodles",
+      "name": "清汤面",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "noodles",
+          "grams": 250
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/plain_noodles.png",
+      "tip": "清清淡淡，也值得认真吃完。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 10,
+        "steps": [
+          "水开下面条，用筷子轻轻拨散",
+          "中火煮至面条没有硬芯",
+          "捞出加清汤和生抽调味"
+        ]
+      }
+    },
+    {
+      "id": "rice_porridge",
+      "name": "白粥",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "rice",
+          "grams": 30
+        }
+      ],
+      "image": "/images/dishes/rice_porridge.png",
+      "tip": "慢火熬出的温柔，适合想被安慰的早晨。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 40,
+        "steps": [
+          "大米淘洗后加足量清水",
+          "大火煮开转小火慢熬30分钟",
+          "熬到米粒开花、粥变浓稠"
+        ]
+      }
+    },
+    {
+      "id": "steamed_bun",
+      "name": "馒头",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast",
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "steamed_bun",
+          "grams": 100
+        }
+      ],
+      "image": "/images/dishes/steamed_bun.png",
+      "tip": "白白软软，掰开还有热气。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 8,
+        "steps": [
+          "馒头放入蒸锅，冷水上锅",
+          "水开后蒸8分钟",
+          "关火焖2分钟再开盖"
+        ]
+      }
+    },
+    {
+      "id": "steamed_pumpkin",
+      "name": "蒸南瓜",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "pumpkin",
+          "grams": 250
+        }
+      ],
+      "image": "/images/dishes/steamed_pumpkin.png",
+      "tip": "金灿灿的甜，像一小块秋天。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 20,
+        "steps": [
+          "南瓜去皮去瓤，切成厚片",
+          "水开后上锅蒸15分钟",
+          "筷子能轻松扎透即可"
+        ]
+      }
+    },
+    {
+      "id": "banana",
+      "name": "香蕉",
+      "rarity": "R",
+      "category": "fruit",
+      "meals": [
+        "breakfast",
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "banana",
+          "grams": 150
+        }
+      ],
+      "image": "/images/dishes/banana.png",
+      "tip": "剥开就能吃，懒人友好。",
+      "cooking": {
+        "method": "免煮",
+        "timeMinutes": 0,
+        "steps": [
+          "挑一根熟透的香蕉",
+          "剥皮后直接吃",
+          "也可切片拌酸奶"
+        ]
+      }
+    },
+    {
+      "id": "apple",
+      "name": "苹果",
+      "rarity": "R",
+      "category": "fruit",
+      "meals": [
+        "breakfast",
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "apple",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/apple.png",
+      "tip": "咔嚓一口，清脆又安心。",
+      "cooking": {
+        "method": "免煮",
+        "timeMinutes": 0,
+        "steps": [
+          "苹果洗净，不用削皮",
+          "切成小块直接吃",
+          "搭配坚果更耐饿"
+        ]
+      }
+    },
+    {
+      "id": "plain_yogurt",
+      "name": "无糖酸奶",
+      "rarity": "R",
+      "category": "drink",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "yogurt",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/plain_yogurt.png",
+      "tip": "酸酸的，但很诚实。",
+      "cooking": {
+        "method": "免煮",
+        "timeMinutes": 0,
+        "steps": [
+          "从冰箱取出无糖酸奶",
+          "倒入杯中直接食用",
+          "可加水果或燕麦"
+        ]
+      }
+    },
+    {
+      "id": "soy_milk",
+      "name": "豆浆",
+      "rarity": "R",
+      "category": "drink",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "soy_milk",
+          "grams": 300
+        }
+      ],
+      "image": "/images/dishes/soy_milk.png",
+      "tip": "热豆浆的香气，是早晨的小确幸。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 15,
+        "steps": [
+          "豆浆倒入小锅，中小火加热",
+          "边加热边搅拌，避免糊底",
+          "煮沸后再小火煮2分钟至熟透"
+        ]
+      }
+    },
+    {
+      "id": "cucumber_salad",
+      "name": "凉拌黄瓜",
+      "rarity": "R",
+      "category": "veg",
+      "meals": [
+        "breakfast",
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "cucumber",
+          "grams": 200
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/cucumber_salad.png",
+      "tip": "清爽到会听见夏天的声音。",
+      "cooking": {
+        "method": "拌",
+        "timeMinutes": 8,
+        "steps": [
+          "黄瓜洗净拍裂，切成小段",
+          "加蒜末、生抽和少许醋",
+          "拌匀后静置5分钟入味"
+        ]
+      }
+    },
+    {
+      "id": "steamed_yam",
+      "name": "蒸山药",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "yam",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/steamed_yam.png",
+      "tip": "粉粉糯糯，低调的养生选手。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 20,
+        "steps": [
+          "山药去皮，切成小段",
+          "水开后上锅蒸20分钟",
+          "蒸到筷子能轻松扎透"
+        ]
+      }
+    },
+    {
+      "id": "tomato_egg",
+      "name": "番茄炒蛋",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "tomato",
+          "grams": 200
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 100
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/tomato_egg.png",
+      "tip": "红黄相间，永远下饭。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 10,
+        "steps": [
+          "番茄切块，鸡蛋打散备用",
+          "热锅下油，炒蛋至熟透",
+          "下番茄炒软，加盐翻匀"
+        ]
+      }
+    },
+    {
+      "id": "chicken_salad",
+      "name": "鸡胸肉沙拉",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "chicken_breast",
+          "grams": 120
+        },
+        {
+          "ingredientId": "lettuce",
+          "grams": 100
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 80
+        },
+        {
+          "ingredientId": "cucumber",
+          "grams": 80
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/chicken_salad.png",
+      "tip": "脆生生的一碗，轻盈但不敷衍。",
+      "cooking": {
+        "method": "拌",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡胸肉冷水下锅煮熟透",
+          "放凉后撕成细丝",
+          "生菜番茄洗净，与鸡肉拌匀"
+        ]
+      }
+    },
+    {
+      "id": "mushroom_cabbage",
+      "name": "香菇圆白菜",
+      "rarity": "SR",
+      "category": "veg",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "shiitake",
+          "grams": 60
+        },
+        {
+          "ingredientId": "cabbage",
+          "grams": 200
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/mushroom_cabbage.png",
+      "tip": "香菇把鲜味都借给了圆白菜。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 8,
+        "steps": [
+          "香菇切片，圆白菜撕成小片",
+          "热锅下油，先炒香菇",
+          "下圆白菜炒软，加盐调味"
+        ]
+      }
+    },
+    {
+      "id": "shrimp_steamed_egg",
+      "name": "虾仁蒸蛋",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "shrimp",
+          "grams": 80
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 100
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/shrimp_steamed_egg.png",
+      "tip": "滑嫩蒸蛋里藏着粉色小惊喜。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 12,
+        "steps": [
+          "鸡蛋加温水打匀，过筛",
+          "虾仁焯至变色熟透后放入",
+          "盖保鲜膜蒸10分钟至熟透"
+        ]
+      }
+    },
+    {
+      "id": "beef_veg_rice",
+      "name": "牛肉杂蔬饭",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "lean_beef",
+          "grams": 100
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 150
+        },
+        {
+          "ingredientId": "broccoli",
+          "grams": 100
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 50
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/beef_veg_rice.png",
+      "tip": "一碗装下肉、菜和踏实。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "牛肉切片，用生抽腌10分钟",
+          "热锅炒牛肉至完全熟透",
+          "加蔬菜和米饭翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "salmon_riceball",
+      "name": "三文鱼饭团",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast",
+        "lunch"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "salmon",
+          "grams": 80
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 150
+        }
+      ],
+      "image": "/images/dishes/salmon_riceball.png",
+      "tip": "捏成圆圆的，方便一口一口幸福。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 15,
+        "steps": [
+          "三文鱼煎至中心熟透后压碎",
+          "与温米饭和少许生抽拌匀",
+          "戴手套捏成小饭团"
+        ]
+      }
+    },
+    {
+      "id": "tofu_veg_pot",
+      "name": "豆腐蔬菜煲",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "tofu",
+          "grams": 150
+        },
+        {
+          "ingredientId": "shiitake",
+          "grams": 50
+        },
+        {
+          "ingredientId": "cabbage",
+          "grams": 100
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/tofu_veg_pot.png",
+      "tip": "咕嘟咕嘟，豆腐吸饱了汤汁。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 20,
+        "steps": [
+          "豆腐切块，香菇切片",
+          "锅中加蔬菜和生抽煮开",
+          "下豆腐小火炖10分钟"
+        ]
+      }
+    },
+    {
+      "id": "chicken_porridge",
+      "name": "鸡肉粥",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 80
+        },
+        {
+          "ingredientId": "rice",
+          "grams": 40
+        }
+      ],
+      "image": "/images/dishes/chicken_porridge.png",
+      "tip": "熬到米开花，鸡肉也变温柔。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 40,
+        "steps": [
+          "大米淘洗，加足量水煮开",
+          "鸡肉切小块，煮至熟透",
+          "转小火熬到米粒开花"
+        ]
+      }
+    },
+    {
+      "id": "banana_oat_cup",
+      "name": "香蕉燕麦杯",
+      "rarity": "SR",
+      "category": "snack",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "banana",
+          "grams": 100
+        },
+        {
+          "ingredientId": "oats",
+          "grams": 40
+        },
+        {
+          "ingredientId": "yogurt",
+          "grams": 100
+        }
+      ],
+      "image": "/images/dishes/banana_oat_cup.png",
+      "tip": "层层叠叠，像一杯可以吃的云。",
+      "cooking": {
+        "method": "拌",
+        "timeMinutes": 5,
+        "steps": [
+          "燕麦片用少量热水泡软",
+          "香蕉切片铺在燕麦上",
+          "淋上酸奶，拌匀食用"
+        ]
+      }
+    },
+    {
+      "id": "avocado_toast",
+      "name": "牛油果吐司",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "avocado",
+          "grams": 80
+        },
+        {
+          "ingredientId": "whole_wheat_bread",
+          "grams": 80
+        }
+      ],
+      "image": "/images/dishes/avocado_toast.png",
+      "tip": "绿油油地铺满，早餐也有仪式感。",
+      "cooking": {
+        "method": "烤",
+        "timeMinutes": 5,
+        "steps": [
+          "牛油果去核，果肉压成泥",
+          "吐司烤至表面微脆",
+          "把牛油果泥抹在吐司上"
+        ]
+      }
+    },
+    {
+      "id": "corn_chicken",
+      "name": "玉米鸡丁",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "corn",
+          "grams": 100
+        },
+        {
+          "ingredientId": "chicken_breast",
+          "grams": 100
+        },
+        {
+          "ingredientId": "bell_pepper",
+          "grams": 50
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/corn_chicken.png",
+      "tip": "甜玉米和嫩鸡丁，颜色先赢了。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "鸡胸肉切丁，用生抽腌5分钟",
+          "热锅炒鸡丁至完全熟透",
+          "加玉米和彩椒翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "enoki_beef_roll",
+      "name": "金针菇牛肉卷",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "enoki",
+          "grams": 100
+        },
+        {
+          "ingredientId": "lean_beef",
+          "grams": 120
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/enoki_beef_roll.png",
+      "tip": "一口咬下去，汁水在嘴里开会。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 15,
+        "steps": [
+          "金针菇洗净，用牛肉片卷起",
+          "平底锅少油，煎至牛肉熟透",
+          "淋生抽，收汁后盛出"
+        ]
+      }
+    },
+    {
+      "id": "spinach_egg_soup",
+      "name": "菠菜蛋花汤",
+      "rarity": "SR",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "spinach",
+          "grams": 150
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 80
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/spinach_egg_soup.png",
+      "tip": "绿意和蛋花在碗里打了个转。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 8,
+        "steps": [
+          "菠菜洗净，鸡蛋打散",
+          "水开后下菠菜煮软",
+          "淋入蛋液，煮至熟透"
+        ]
+      }
+    },
+    {
+      "id": "teriyaki_chicken_rice",
+      "name": "照烧鸡腿饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 150
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 180
+        },
+        {
+          "ingredientId": "broccoli",
+          "grams": 100
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/teriyaki_chicken_rice.png",
+      "tip": "酱汁亮晶晶，米饭要遭殃了。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡腿肉去骨，用生抽腌10分钟",
+          "平底锅煎至两面熟透",
+          "加蜂蜜收汁，配米饭和西兰花"
+        ]
+      }
+    },
+    {
+      "id": "tomato_brisket_noodles",
+      "name": "番茄牛腩面",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "beef_brisket",
+          "grams": 120
+        },
+        {
+          "ingredientId": "noodles",
+          "grams": 200
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 150
+        },
+        {
+          "ingredientId": "onion",
+          "grams": 50
+        }
+      ],
+      "image": "/images/dishes/tomato_brisket_noodles.png",
+      "tip": "炖到软烂的牛腩，连汤都想喝光。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 90,
+        "steps": [
+          "牛腩切块，焯水后洗净",
+          "加番茄洋葱炖至牛腩熟透",
+          "下面条煮熟，连汤盛出"
+        ]
+      }
+    },
+    {
+      "id": "salmon_avocado_rice",
+      "name": "三文鱼牛油果饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "salmon",
+          "grams": 120
+        },
+        {
+          "ingredientId": "avocado",
+          "grams": 80
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 180
+        }
+      ],
+      "image": "/images/dishes/salmon_avocado_rice.png",
+      "tip": "粉橘配嫩绿，碗里开出一朵花。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 15,
+        "steps": [
+          "三文鱼煎至中心熟透",
+          "牛油果切片，米饭盛碗",
+          "摆上三文鱼和牛油果"
+        ]
+      }
+    },
+    {
+      "id": "shrimp_egg_rice",
+      "name": "虾仁滑蛋饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "shrimp",
+          "grams": 100
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 120
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 180
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/shrimp_egg_rice.png",
+      "tip": "滑蛋抱住虾仁，米饭负责兜底。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "虾仁焯至变色熟透",
+          "鸡蛋打散，热锅炒至熟透",
+          "加米饭和虾仁翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "pan_fried_cod",
+      "name": "香煎鳕鱼配时蔬",
+      "rarity": "SSR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "cod",
+          "grams": 150
+        },
+        {
+          "ingredientId": "broccoli",
+          "grams": 100
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 60
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/pan_fried_cod.png",
+      "tip": "外脆里嫩，盘子都变得高级了。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 15,
+        "steps": [
+          "鳕鱼擦干，撒少许盐",
+          "平底锅少油，煎至两面熟透",
+          "搭配焯熟的蔬菜一起装盘"
+        ]
+      }
+    },
+    {
+      "id": "mapo_tofu_rice",
+      "name": "麻婆豆腐盖饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "tofu",
+          "grams": 150
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 50
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 150
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/mapo_tofu_rice.png",
+      "tip": "麻辣鲜香，一口接一口停不下来。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "豆腐切块，肉末备好",
+          "热锅炒肉末至熟透",
+          "下豆腐和生抽，盖在米饭上"
+        ]
+      }
+    },
+    {
+      "id": "beef_pepper_brown_rice",
+      "name": "牛肉彩椒糙米饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "lean_beef",
+          "grams": 120
+        },
+        {
+          "ingredientId": "bell_pepper",
+          "grams": 100
+        },
+        {
+          "ingredientId": "cooked_brown_rice",
+          "grams": 150
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/beef_pepper_brown_rice.png",
+      "tip": "彩椒把整碗饭都点亮了。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "牛肉切片，彩椒切块",
+          "热锅炒牛肉至完全熟透",
+          "加彩椒和糙米饭翻炒"
+        ]
+      }
+    },
+    {
+      "id": "pumpkin_chicken_rice",
+      "name": "南瓜鸡肉焖饭",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "pumpkin",
+          "grams": 150
+        },
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 120
+        },
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 150
+        }
+      ],
+      "image": "/images/dishes/pumpkin_chicken_rice.png",
+      "tip": "南瓜化在饭里，甜得不动声色。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 30,
+        "steps": [
+          "南瓜切块，鸡腿肉切块",
+          "锅中加水，放入南瓜和鸡肉",
+          "炖至鸡肉熟透、南瓜软烂"
+        ]
+      }
+    },
+    {
+      "id": "cheese_burger",
+      "name": "豪华芝士汉堡",
+      "rarity": "UR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "whole_wheat_bread",
+          "grams": 120
+        },
+        {
+          "ingredientId": "lean_beef",
+          "grams": 150
+        },
+        {
+          "ingredientId": "cheese",
+          "grams": 40
+        },
+        {
+          "ingredientId": "lettuce",
+          "grams": 50
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 50
+        },
+        {
+          "ingredientId": "butter",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/cheese_burger.png",
+      "tip": "彩蛋级快乐，热量什么的明天再说。",
+      "cooking": {
+        "method": "外买",
+        "timeMinutes": 0,
+        "steps": [
+          "选现做的芝士汉堡，少放酱",
+          "拿到后尽快吃，避免久放",
+          "复热时加热至肉饼中心熟透"
+        ]
+      }
+    },
+    {
+      "id": "choco_icecream",
+      "name": "熔岩巧克力冰淇淋",
+      "rarity": "UR",
+      "category": "snack",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "dark_chocolate",
+          "grams": 80
+        },
+        {
+          "ingredientId": "ice_cream",
+          "grams": 150
+        },
+        {
+          "ingredientId": "butter",
+          "grams": 20
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 20
+        }
+      ],
+      "image": "/images/dishes/choco_icecream.png",
+      "tip": "冷与热在勺子里握手言和。",
+      "cooking": {
+        "method": "免煮",
+        "timeMinutes": 0,
+        "steps": [
+          "从冷冻室取出冰淇淋",
+          "回温1分钟更好挖",
+          "挖成小球，淋上巧克力酱"
+        ]
+      }
+    },
+    {
+      "id": "fried_chicken_platter",
+      "name": "深夜炸鸡拼盘",
+      "rarity": "UR",
+      "category": "main",
+      "meals": [
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "fried_chicken",
+          "grams": 250
+        },
+        {
+          "ingredientId": "potato",
+          "grams": 150
+        },
+        {
+          "ingredientId": "cola",
+          "grams": 330
+        }
+      ],
+      "image": "/images/dishes/fried_chicken_platter.png",
+      "tip": "咔嚓一声，深夜的灵魂被接住了。",
+      "cooking": {
+        "method": "外买",
+        "timeMinutes": 0,
+        "steps": [
+          "选现炸的炸鸡拼盘",
+          "确认鸡肉中心熟透再吃",
+          "冷掉可用空气炸锅复热5分钟"
+        ]
+      }
+    },
+    {
+      "id": "youtiao",
+      "name": "油条",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "youtiao",
+          "grams": 100
+        }
+      ],
+      "image": "/images/dishes/youtiao.png",
+      "tip": "金黄酥脆，蘸豆浆是经典搭配。",
+      "cooking": {
+        "method": "外买",
+        "timeMinutes": 0,
+        "steps": [
+          "选现炸的油条，颜色金黄",
+          "拿到后趁热吃，口感最酥",
+          "冷掉可复热2分钟再食用"
+        ]
+      }
+    },
+    {
+      "id": "century_egg_pork_porridge",
+      "name": "皮蛋瘦肉粥",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 250
+        },
+        {
+          "ingredientId": "century_egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 50
+        }
+      ],
+      "image": "/images/dishes/century_egg_pork_porridge.png",
+      "tip": "咸香绵滑，早餐摊的熟悉味道。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 40,
+        "steps": [
+          "米饭加足量水煮开",
+          "加入肉末和皮蛋，煮至熟透",
+          "转小火熬到粥变浓稠"
+        ]
+      }
+    },
+    {
+      "id": "egg_pancake",
+      "name": "鸡蛋饼",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "flour",
+          "grams": 60
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "milk",
+          "grams": 30
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/egg_pancake.png",
+      "tip": "软乎乎的一张，卷什么都好吃。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 10,
+        "steps": [
+          "面粉加鸡蛋和牛奶搅成糊",
+          "平底锅刷油，倒入面糊",
+          "煎至两面金黄熟透"
+        ]
+      }
+    },
+    {
+      "id": "xiaolongbao",
+      "name": "小笼包",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "xiaolongbao",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/xiaolongbao.png",
+      "tip": "小心咬开，先吸一口鲜汤。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 10,
+        "steps": [
+          "小笼包放入蒸锅，冷水上锅",
+          "水开后蒸8分钟",
+          "蒸至馅料中心熟透"
+        ]
+      }
+    },
+    {
+      "id": "steamed_dumplings",
+      "name": "蒸饺",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "dumpling",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/steamed_dumplings.png",
+      "tip": "皮薄馅香，一笼刚刚好。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 12,
+        "steps": [
+          "蒸饺摆入蒸锅，留出空隙",
+          "水开后蒸10分钟",
+          "蒸至馅料熟透再开盖"
+        ]
+      }
+    },
+    {
+      "id": "tofu_pudding",
+      "name": "豆腐脑",
+      "rarity": "R",
+      "category": "snack",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "tofu_pudding",
+          "grams": 250
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/tofu_pudding.png",
+      "tip": "咸甜都行，趁热吃最嫩。",
+      "cooking": {
+        "method": "外买",
+        "timeMinutes": 0,
+        "steps": [
+          "买一碗现做的咸豆腐脑",
+          "请店家少放卤汁，趁热吃",
+          "回家可微波加热1分钟"
+        ]
+      }
+    },
+    {
+      "id": "wonton_soup",
+      "name": "馄饨",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "breakfast",
+        "lunch"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "wonton",
+          "grams": 200
+        },
+        {
+          "ingredientId": "bok_choy",
+          "grams": 50
+        }
+      ],
+      "image": "/images/dishes/wonton_soup.png",
+      "tip": "薄皮裹着鲜肉，汤也要喝光。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 12,
+        "steps": [
+          "水开下馄饨，轻轻推动",
+          "煮至馄饨浮起熟透",
+          "加青菜烫软，盛出调味"
+        ]
+      }
+    },
+    {
+      "id": "milk",
+      "name": "牛奶",
+      "rarity": "R",
+      "category": "drink",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "milk",
+          "grams": 250
+        }
+      ],
+      "image": "/images/dishes/milk.png",
+      "tip": "简单一杯，温柔地补充蛋白质。",
+      "cooking": {
+        "method": "免煮",
+        "timeMinutes": 0,
+        "steps": [
+          "倒入杯中直接饮用",
+          "喜欢温热可隔水温热",
+          "不要长时间煮沸"
+        ]
+      }
+    },
+    {
+      "id": "tea_egg",
+      "name": "茶叶蛋",
+      "rarity": "R",
+      "category": "snack",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/tea_egg.png",
+      "tip": "越泡越入味，剥壳的时候最香。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 30,
+        "steps": [
+          "鸡蛋冷水下锅，煮至熟透",
+          "轻轻敲裂蛋壳，加生抽和卤料",
+          "小火煮20分钟，关火浸泡"
+        ]
+      }
+    },
+    {
+      "id": "fruit_yogurt_bowl",
+      "name": "水果酸奶碗",
+      "rarity": "R",
+      "category": "snack",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "yogurt",
+          "grams": 150
+        },
+        {
+          "ingredientId": "banana",
+          "grams": 60
+        },
+        {
+          "ingredientId": "strawberry",
+          "grams": 50
+        }
+      ],
+      "image": "/images/dishes/fruit_yogurt_bowl.png",
+      "tip": "酸酸甜甜，像一碗小花园。",
+      "cooking": {
+        "method": "拌",
+        "timeMinutes": 5,
+        "steps": [
+          "香蕉切片，草莓洗净切半",
+          "酸奶倒入碗中",
+          "铺上水果，轻轻拌匀"
+        ]
+      }
+    },
+    {
+      "id": "steamed_taro",
+      "name": "蒸芋头",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "taro",
+          "grams": 200
+        }
+      ],
+      "image": "/images/dishes/steamed_taro.png",
+      "tip": "粉粉糯糯，自带淡淡甜味。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 25,
+        "steps": [
+          "芋头去皮，切成大块",
+          "水开后上锅蒸20分钟",
+          "蒸到筷子能轻松扎透"
+        ]
+      }
+    },
+    {
+      "id": "egg_fried_rice",
+      "name": "蛋炒饭",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "cooked_rice",
+          "grams": 250
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 30
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/egg_fried_rice.png",
+      "tip": "粒粒分明，鸡蛋香裹住米饭。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 10,
+        "steps": [
+          "鸡蛋打散，胡萝卜切丁",
+          "热锅炒蛋至完全熟透",
+          "加米饭和胡萝卜翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "braised_beef_noodles",
+      "name": "红烧牛肉面",
+      "rarity": "SSR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "noodles",
+          "grams": 250
+        },
+        {
+          "ingredientId": "beef_brisket",
+          "grams": 80
+        },
+        {
+          "ingredientId": "bok_choy",
+          "grams": 50
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/braised_beef_noodles.png",
+      "tip": "牛肉炖得软烂，汤头浓郁。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 90,
+        "steps": [
+          "牛腩切块，焯水后洗净",
+          "加生抽和水炖至牛腩熟透",
+          "下面条和青菜煮熟，盛出"
+        ]
+      }
+    },
+    {
+      "id": "hot_sour_noodles",
+      "name": "酸辣粉",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "sweet_potato_noodles",
+          "grams": 200
+        },
+        {
+          "ingredientId": "peanut",
+          "grams": 15
+        },
+        {
+          "ingredientId": "cucumber",
+          "grams": 30
+        }
+      ],
+      "image": "/images/dishes/hot_sour_noodles.png",
+      "tip": "酸辣开胃，嗦粉的快乐。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 12,
+        "steps": [
+          "红薯粉用温水泡软",
+          "水开下锅煮至透明熟透",
+          "加花生、黄瓜和醋拌匀"
+        ]
+      }
+    },
+    {
+      "id": "kung_pao_chicken",
+      "name": "宫保鸡丁",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "chicken_breast",
+          "grams": 120
+        },
+        {
+          "ingredientId": "peanut",
+          "grams": 20
+        },
+        {
+          "ingredientId": "bell_pepper",
+          "grams": 50
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/kung_pao_chicken.png",
+      "tip": "花生脆、鸡丁嫩，下饭高手。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "鸡胸肉切丁，花生备好",
+          "热锅炒鸡丁至完全熟透",
+          "加彩椒和花生翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "sweet_sour_pork",
+      "name": "糖醋里脊",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "lean_pork",
+          "grams": 120
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 25
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 15
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/sweet_sour_pork.png",
+      "tip": "酸甜挂汁，外酥里嫩。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 20,
+        "steps": [
+          "里脊切条，裹一层面粉",
+          "热锅下油，炒至里脊熟透",
+          "加蜂蜜和醋翻匀收汁"
+        ]
+      }
+    },
+    {
+      "id": "steamed_sea_bass",
+      "name": "清蒸鲈鱼",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "sea_bass",
+          "grams": 200
+        },
+        {
+          "ingredientId": "onion",
+          "grams": 20
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/steamed_sea_bass.png",
+      "tip": "清蒸最能吃出鱼的鲜。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 15,
+        "steps": [
+          "鲈鱼处理干净，划两刀",
+          "铺上洋葱，水开后蒸12分钟",
+          "蒸至鱼肉熟透，淋生抽"
+        ]
+      }
+    },
+    {
+      "id": "garlic_greens",
+      "name": "蒜蓉青菜",
+      "rarity": "R",
+      "category": "veg",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "bok_choy",
+          "grams": 200
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/garlic_greens.png",
+      "tip": "绿油油一盘，清爽解腻。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 8,
+        "steps": [
+          "上海青洗净，沥干水分",
+          "热锅下油，爆香蒜末",
+          "下青菜炒软，加盐调味"
+        ]
+      }
+    },
+    {
+      "id": "winter_melon_ribs_soup",
+      "name": "冬瓜排骨汤",
+      "rarity": "SR",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "winter_melon",
+          "grams": 200
+        },
+        {
+          "ingredientId": "pork_ribs",
+          "grams": 100
+        }
+      ],
+      "image": "/images/dishes/winter_melon_ribs_soup.png",
+      "tip": "汤清味鲜，冬瓜吸饱肉香。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 60,
+        "steps": [
+          "排骨焯水，冬瓜切块",
+          "加清水炖排骨至熟透",
+          "下冬瓜再炖15分钟"
+        ]
+      }
+    },
+    {
+      "id": "tomato_egg_soup",
+      "name": "番茄蛋汤",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "ingredients": [
+        {
+          "ingredientId": "tomato",
+          "grams": 100
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/tomato_egg_soup.png",
+      "tip": "酸甜暖胃，蛋花轻轻飘。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 10,
+        "steps": [
+          "番茄切块，鸡蛋打散",
+          "水开下番茄煮软",
+          "淋入蛋液，煮至熟透"
+        ]
+      }
+    }
+  ]
+}

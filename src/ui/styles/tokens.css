@@ -1,0 +1,42 @@
+:root {
+  color-scheme: light;
+
+  --paper: #fff6e8;
+  --paper-deep: #f3e2cb;
+  --desk: #e9d6bd;
+  --milk: #fffcf6;
+  --cocoa: #43302a;
+  --cocoa-muted: #7b675c;
+  --cocoa-faint: #806857;
+
+  --marmalade: #e98a3c;
+  --marmalade-deep: #9c5015;
+  --marmalade-soft: #fbe1c4;
+  --butter: #ffd98f;
+  --butter-soft: #fff0c9;
+  --strawberry: #e97979;
+  --strawberry-deep: #a84242;
+  --strawberry-soft: #fbe3e1;
+  --matcha: #86a87f;
+  --matcha-deep: #4f6b48;
+  --matcha-soft: #e8f0e4;
+
+  --line: #e7d2b8;
+  --line-strong: #d7b995;
+  --shadow-color: rgba(107, 72, 42, 0.13);
+
+  --radius-xs: 10px;
+  --radius-sm: 14px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
+  --radius-pill: 999px;
+
+  --font-rounded: ui-rounded, 'SF Pro Rounded', 'Yuanti SC', 'YouYuan',
+    '幼圆', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+
+  --shadow-soft: 0 6px 18px rgba(107, 72, 42, 0.08);
+  --shadow-card: 0 12px 30px var(--shadow-color);
+  --shadow-ticket: 0 4px 0 rgba(196, 158, 116, 0.2),
+    0 12px 24px rgba(107, 72, 42, 0.08);
+}

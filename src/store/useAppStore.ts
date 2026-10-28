@@ -1,0 +1,2089 @@
+import { create } from 'zustand'
+
+import { customDishAllowedRarities } from '@/config/gameConfig'
+import { toDateKey } from '@/core/dateKey'
+import {
+  addCustomComponent,
+  addDishComponent,
+  createComboCandidate,
+  createCustomOnlyCandidate,
+  discardComponent,
+  replaceComponent as replaceComponentSnapshot,
+  restoreComponent,
+  withComponentEaten,
+  withComponentIngredientGrams,
+  withCustomComponentCalories,
+} from '@/core/components'
+import {
+  buildDishLibrary,
+  createCustomDishId,
+  createCustomIngredientId,
+  createImageId,
+  hasAnySnapshotReference,
+  hasCheckInRecords,
+} from '@/core/customDish'
+import type { Rng } from '@/core/draw'
+import { getDrawAllowance } from '@/core/drawBudget'
+import type { DrawSource } from '@/core/drawBudget'
+import {
+  checkInMeal as coreCheckInMeal,
+  drawForMeal,
+  redrawComponent as coreRedrawComponent,
+} from '@/core/gameFlow'
+import type { DrawBlockedReason } from '@/core/gameFlow'
+import { getStampTier, getStampUpgrade } from '@/core/stamps'
+import { calcTargetCalories } from '@/core/targetCalories'
+import { isTokenValid } from '@/core/tokens'
+import type {
+  BodyProfile,
+  CalorieMode,
+  ComboCandidateSnapshot,
+  CookingInfo,
+  CustomDish,
+  CustomDishIngredientRow,
+  CustomIngredient,
+  DishCategory,
+  MealComponentSnapshot,
+  MealType,
+  Rarity,
+  StampDishSnapshot,
+  StampTier,
+} from '@/core/types'
+import { countUnicodeChars, isDishCategory, isMealType } from '@/data/dataRules'
+import { storage } from '@/storage'
+import {
+  clearAppData,
+  createEmptyAppData,
+  ensureToday,
+  loadAppData,
+  recordStampCheckIn,
+  saveAppData,
+} from '@/storage/appData'
+import type { AppData, DailyRecord, MealRecord } from '@/storage/appData'
+import type {
+  BinaryStorageAdapter,
+  ImageMime,
+  StoredImage,
+} from '@/storage/BinaryStorageAdapter'
+import {
+  PENDING_IMPORT_KEY,
+  buildBackup,
+  collectReferencedImageIds,
+  parseBackupJson,
+  serializeBackup,
+} from '@/storage/backup'
+import type { StorageAdapter } from '@/storage/StorageAdapter'
+
+export type AppStoreStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+export interface DrawReceipt {
+  meal: MealType
+  candidate: ComboCandidateSnapshot
+  source: DrawSource
+  pityTriggered: boolean
+  tokenCount: number
+  pityCount: number
+}
+
+export type DrawActionResult =
+  | { status: 'drawn'; receipt: DrawReceipt }
+  | { status: 'ad-required' }
+  | { status: 'ad-cancelled' }
+  | { status: 'stale'; message: string }
+  | { status: 'blocked'; reason: DrawBlockedReason }
+  | { status: 'error'; message: string }
+
+export interface CheckInStampReceipt {
+  dish: StampDishSnapshot
+  count: number
+  tier: StampTier
+  /** 本次打卡日期，供 UI 显示在印章上。 */
+  dateKey: string
+  previousTier: StampTier | null
+  /** 是否从铜升银或从银升金。 */
+  upgraded: boolean
+}
+
+export interface CheckInReceipt {
+  meal: MealType
+  name: string
+  components: MealComponentSnapshot[]
+  calories: number | null
+  tokenRewarded: boolean
+  tokenCount: number
+  rewardKind: 'formal' | 'custom'
+  stamps: CheckInStampReceipt[]
+}
+
+export type CheckInActionResult =
+  | { status: 'checked-in'; receipt: CheckInReceipt }
+  | {
+      status: 'blocked'
+      reason:
+        | 'checked-in'
+        | 'no-selection'
+        | 'no-components'
+        | 'no-eaten'
+    }
+  | { status: 'error'; message: string }
+
+export type SelectComboResult =
+  | { status: 'selected' }
+  | {
+      status: 'blocked'
+      reason: 'checked-in' | 'not-in-pool'
+    }
+  | { status: 'error'; message: string }
+
+export type ComponentBlockedReason =
+  | 'checked-in'
+  | 'no-selection'
+  | 'not-in-pool'
+  | 'component-missing'
+  | 'not-redrawable'
+  | 'no-draws'
+  | 'last-component'
+  | 'restore-conflict'
+  | 'missing-dish'
+  | 'missing-discard'
+
+export type ComponentActionFailure =
+  | { status: 'ad-required' }
+  | { status: 'ad-cancelled' }
+  | { status: 'stale'; message: string }
+  | { status: 'blocked'; reason: ComponentBlockedReason }
+  | { status: 'no-candidate'; reason: 'empty-pool' | 'pity-unavailable' }
+  | { status: 'error'; message: string }
+
+export type ComponentActionResult =
+  | { status: 'updated' }
+  | ComponentActionFailure
+
+export type RedrawActionResult =
+  | { status: 'redrawn'; source: DrawSource | null }
+  | ComponentActionFailure
+
+export interface CheckInOverrides {
+  eaten?: Readonly<Record<string, boolean>>
+  ingredientGrams?: Readonly<
+    Record<string, Readonly<Record<string, number>>>
+  >
+  customCalories?: Readonly<Record<string, number | null>>
+}
+
+export interface DiscardReference {
+  dateKey: string
+  meal: MealType
+  candidateId: string
+  componentId: string
+}
+
+export type ImportDataResult =
+  | { status: 'imported' }
+  | { status: 'error'; message: string }
+
+export type ExportBackupResult =
+  | { status: 'ok'; json: string }
+  | { status: 'error'; message: string }
+
+export type ClearDataResult =
+  | { status: 'cleared' }
+  | { status: 'error'; message: string }
+
+export interface CustomDishImageInput {
+  bytes: Uint8Array
+  mime: ImageMime
+}
+
+export interface CustomDishInput {
+  name: string
+  /** 没上传图片时的兜底图标。 */
+  emoji: string | null
+  category: DishCategory
+  meals: MealType[]
+  rarity: Rarity
+  ingredientRows: CustomDishIngredientRow[]
+  calorieMode: CalorieMode
+  /** total 模式手填总热量。 */
+  calories: number | null
+  cooking: CookingInfo | null
+  includeInPool: boolean
+  /**
+   * 新建：带图时传入，否则省略。
+   * 编辑：省略表示保留原图，null 表示移除，传值表示换图。
+   */
+  image?: CustomDishImageInput | null
+}
+
+export type CustomDishActionResult =
+  | { status: 'saved'; dishId: string }
+  /** 删除入口按规则执行：有记录时只归档，没有才真删。 */
+  | { status: 'removed'; archived: boolean }
+  | { status: 'error'; message: string }
+
+export interface AppStore {
+  status: AppStoreStatus
+  error: string | null
+  data: AppData
+  todayKey: string
+  /** 非持久化：最近一次可撤销的舍弃。 */
+  lastDiscard: DiscardReference | null
+
+  hydrate: () => Promise<void>
+  refreshForToday: () => Promise<void>
+  updateData: (updater: (data: AppData) => AppData) => Promise<void>
+  updateProfile: (profile: BodyProfile | null) => Promise<void>
+  clearProfile: () => Promise<void>
+  setShowCalories: (enabled: boolean) => Promise<void>
+  dismissProfileHint: () => Promise<void>
+  recordStamp: (dishId: string, dateKey?: string) => Promise<void>
+  drawMeal: (type: MealType) => Promise<DrawActionResult>
+  completeAdDraw: (
+    type: MealType,
+    completed: boolean,
+    requestedDateKey: string,
+  ) => Promise<DrawActionResult>
+  selectCombo: (
+    type: MealType,
+    candidateId: string,
+  ) => Promise<SelectComboResult>
+  redrawComponent: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+  ) => Promise<RedrawActionResult>
+  completeAdRedraw: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+    completed: boolean,
+    requestedDateKey: string,
+  ) => Promise<RedrawActionResult>
+  addComponent: (
+    type: MealType,
+    candidateId: string,
+    dishId: string,
+  ) => Promise<ComponentActionResult>
+  addCustomComponent: (
+    type: MealType,
+    candidateId: string,
+    input: { name: string; calories: number | null },
+  ) => Promise<ComponentActionResult>
+  discardComponent: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+  ) => Promise<ComponentActionResult>
+  undoDiscard: () => Promise<ComponentActionResult>
+  setComponentEaten: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+    eaten: boolean,
+  ) => Promise<ComponentActionResult>
+  updateComponentGrams: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+    grams: Readonly<Record<string, number>>,
+  ) => Promise<ComponentActionResult>
+  updateComponentCalories: (
+    type: MealType,
+    candidateId: string,
+    componentId: string,
+    calories: number | null,
+  ) => Promise<ComponentActionResult>
+  checkInMeal: (
+    type: MealType,
+    input?: CheckInOverrides,
+  ) => Promise<CheckInActionResult>
+  checkInCustomMeal: (
+    type: MealType,
+    input: { name: string; calories: number | null },
+  ) => Promise<CheckInActionResult>
+  /** 导出包装格式备份（含 base64 图片）；在串行队列里执行。 */
+  exportBackup: () => Promise<ExportBackupResult>
+  importJson: (json: string) => Promise<ImportDataResult>
+  clearData: () => Promise<ClearDataResult>
+  createCustomDish: (input: CustomDishInput) => Promise<CustomDishActionResult>
+  updateCustomDish: (
+    dishId: string,
+    input: CustomDishInput,
+  ) => Promise<CustomDishActionResult>
+  /**
+   * 删除自制菜谱：有任何打卡记录或历史快照引用时只归档，
+   * 完全没引用才真删并清理孤立的食材与图片。
+   */
+  deleteCustomDish: (dishId: string) => Promise<CustomDishActionResult>
+}
+
+interface AttemptOutcome<T> {
+  /** null 表示只读，不落盘。 */
+  next: AppData | null
+  result: T
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function errorResult(error: unknown): { status: 'error'; message: string } {
+  return { status: 'error', message: errorMessage(error) }
+}
+
+function sameBytes(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.byteLength !== right.byteLength) {
+    return false
+  }
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) {
+      return false
+    }
+  }
+  return true
+}
+
+interface LockManagerLike {
+  request<T>(name: string, task: () => Promise<T>): Promise<T>
+}
+
+/** 多标签页同时导入/导出时串行化；浏览器不支持 locks 时直接执行。 */
+function withDataLock<T>(task: () => Promise<T>): Promise<T> {
+  if (typeof navigator === 'undefined') {
+    return task()
+  }
+  const locks = (navigator as unknown as { locks?: LockManagerLike }).locks
+  if (!locks || typeof locks.request !== 'function') {
+    return task()
+  }
+  return locks.request('diet-diary:data-transfer', task)
+}
+
+function readPendingImageIds(value: unknown): string[] {
+  if (typeof value !== 'object' || value === null) {
+    return []
+  }
+  const ids = (value as { imageIds?: unknown }).imageIds
+  return Array.isArray(ids)
+    ? ids.filter((id): id is string => typeof id === 'string')
+    : []
+}
+
+function validTokenCount(day: DailyRecord, todayKey: string): number {
+  if (!isTokenValid(day.tokens, todayKey)) {
+    return 0
+  }
+  return Math.max(0, Math.floor(day.tokens.count))
+}
+
+function selectedCandidate(
+  meal: MealRecord,
+): ComboCandidateSnapshot | null {
+  if (!meal.selectedCandidateId) {
+    return null
+  }
+  return (
+    meal.candidateCombos.find(
+      (candidate) => candidate.id === meal.selectedCandidateId,
+    ) ?? null
+  )
+}
+
+function findCandidate(
+  meal: MealRecord,
+  candidateId: string,
+): ComboCandidateSnapshot | null {
+  return meal.candidateCombos.find((item) => item.id === candidateId) ?? null
+}
+
+function replaceCandidate(
+  meal: MealRecord,
+  candidate: ComboCandidateSnapshot,
+): MealRecord {
+  return {
+    ...meal,
+    candidateCombos: meal.candidateCombos.map((item) =>
+      item.id === candidate.id ? candidate : item,
+    ),
+  }
+}
+
+function replaceMeal(
+  data: AppData,
+  todayKey: string,
+  type: MealType,
+  nextMeal: MealRecord,
+  stamps: AppData['stamps'] = data.stamps,
+  tokens?: DailyRecord['tokens'],
+): AppData {
+  const day = data.days[todayKey]!
+  return {
+    ...data,
+    stamps,
+    days: {
+      ...data.days,
+      [todayKey]: {
+        ...day,
+        ...(tokens ? { tokens } : {}),
+        meals: { ...day.meals, [type]: nextMeal },
+      },
+    },
+  }
+}
+
+function drawnComboIds(meal: MealRecord): string[] {
+  return meal.candidateCombos.flatMap((candidate) =>
+    candidate.comboId ? [candidate.comboId] : [],
+  )
+}
+
+function stampSnapshot(dish: {
+  id: string
+  name: string
+  rarity: StampDishSnapshot['rarity']
+  image: string
+  imageId?: string
+  emoji?: string
+  stampImage?: string
+}): StampDishSnapshot {
+  return {
+    id: dish.id,
+    name: dish.name,
+    rarity: dish.rarity,
+    ...(dish.image ? { image: dish.image } : {}),
+    ...(dish.imageId ? { imageId: dish.imageId } : {}),
+    ...(dish.emoji ? { emoji: dish.emoji } : {}),
+    ...(dish.stampImage ? { stampImage: dish.stampImage } : {}),
+  }
+}
+
+function normalizeStoreCooking(value: CookingInfo | null): CookingInfo | null {
+  if (!value) {
+    return null
+  }
+  const steps = value.steps
+    .map((step) => step.trim())
+    .filter((step) => step.length > 0)
+  if (steps.length < 3 || steps.length > 5) {
+    return null
+  }
+  if (steps.some((step) => countUnicodeChars(step) > 30)) {
+    return null
+  }
+  if (
+    !Number.isFinite(value.timeMinutes) ||
+    value.timeMinutes < 0 ||
+    value.timeMinutes > 300
+  ) {
+    return null
+  }
+  return {
+    ...value,
+    steps,
+    timeMinutes: Math.round(value.timeMinutes),
+  }
+}
+
+function normalizeStoreRows(
+  rows: readonly CustomDishIngredientRow[],
+): CustomDishIngredientRow[] {
+  const result: CustomDishIngredientRow[] = []
+  for (const row of rows) {
+    const name = row.name.trim()
+    if (
+      !name ||
+      !Number.isFinite(row.kcalPer100g) ||
+      row.kcalPer100g < 0 ||
+      !Number.isFinite(row.grams) ||
+      row.grams <= 0
+    ) {
+      continue
+    }
+    result.push({
+      ...(row.ingredientId ? { ingredientId: row.ingredientId } : {}),
+      name,
+      kcalPer100g: row.kcalPer100g,
+      grams: row.grams,
+    })
+  }
+  return result
+}
+
+/** 表单已经校验过；这里再兜一层，防止非法值写进主数据。 */
+function normalizeCustomDishInput(
+  input: CustomDishInput,
+  createdAt: string,
+): Omit<CustomDish, 'id' | 'imageId'> {
+  const name = input.name.trim()
+  if (!name || countUnicodeChars(name) > 20) {
+    throw new Error('菜谱名称需要 1~20 个字')
+  }
+  if (!isDishCategory(input.category)) {
+    throw new Error('请选择有效的菜品分类')
+  }
+  const meals = Array.from(new Set(input.meals.filter(isMealType)))
+  if (meals.length === 0) {
+    throw new Error('请至少选择一个适合餐次')
+  }
+  if (!customDishAllowedRarities.some((rarity) => rarity === input.rarity)) {
+    throw new Error('这个稀有度不能用于自制菜')
+  }
+
+  const rows = normalizeStoreRows(input.ingredientRows)
+  const total =
+    input.calories !== null &&
+    Number.isFinite(input.calories) &&
+    input.calories > 0
+      ? Math.round(input.calories)
+      : null
+  const calorieMode: CalorieMode =
+    input.calorieMode === 'total' && total !== null
+      ? 'total'
+      : 'ingredients'
+  if (calorieMode === 'ingredients' && rows.length === 0) {
+    throw new Error('至少添加一种食材，或改成直接填写总热量')
+  }
+
+  const emoji = input.emoji?.trim() ? input.emoji.trim().slice(0, 16) : null
+
+  return {
+    name,
+    emoji,
+    category: input.category,
+    meals,
+    rarity: input.rarity,
+    ingredientRows: rows,
+    calorieMode,
+    calories: calorieMode === 'total' ? total : null,
+    cooking: normalizeStoreCooking(input.cooking),
+    includeInPool: input.includeInPool,
+    archived: false,
+    createdAt,
+  }
+}
+
+export function createAppStore(
+  adapter: StorageAdapter = storage,
+  clock: () => string = () => toDateKey(),
+  rng: Rng = Math.random,
+  imageAdapter: BinaryStorageAdapter = storage,
+) {
+  return create<AppStore>()((set, get) => {
+    const initialKey = clock()
+    let queue: Promise<unknown> = Promise.resolve()
+
+    const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
+      const run = queue.then(task, task)
+      queue = run.then(
+        () => undefined,
+        () => undefined,
+      )
+      return run
+    }
+
+    const fail = (error: unknown): never => {
+      set({
+        status: 'error',
+        error: errorMessage(error),
+      })
+      throw error
+    }
+
+    /** 上次导入可能停在“图片写完、数据没写”，启动时清掉这些孤儿图片。 */
+    const cleanupPendingImages = async (): Promise<void> => {
+      try {
+        const pending = await adapter.get<unknown>(PENDING_IMPORT_KEY)
+        if (pending === null || pending === undefined) {
+          return
+        }
+        for (const imageId of readPendingImageIds(pending)) {
+          try {
+            await imageAdapter.deleteImage(imageId)
+          } catch {
+            // 单张清理失败不阻塞启动，标记仍然会移除。
+          }
+        }
+        await adapter.remove(PENDING_IMPORT_KEY)
+      } catch {
+        // 清理只是尽力而为，失败不影响正常启动。
+      }
+    }
+
+    /**
+     * 串行执行一次读写。gameplay 的只读结果（例如需要广告）
+     * 通过 next: null 表达，不触碰存储。
+     */
+    const attempt = <T>(
+      build: (data: AppData, todayKey: string) => AttemptOutcome<T>,
+    ): Promise<T> =>
+      enqueue(async () => {
+        const today = clock()
+        const current = ensureToday(get().data, today)
+        const outcome = build(current, today)
+
+        if (outcome.next === null) {
+          return outcome.result
+        }
+
+        await saveAppData(adapter, outcome.next)
+        set({
+          data: outcome.next,
+          todayKey: today,
+          status: 'ready',
+          error: null,
+        })
+        return outcome.result
+      })
+
+    const commit = async (
+      build: (data: AppData, todayKey: string) => AppData,
+    ): Promise<void> => {
+      await attempt((data, todayKey) => ({
+        next: build(data, todayKey),
+        result: undefined,
+      }))
+    }
+
+    /** 只清理确实没人引用的图片；清理失败就留成孤儿，不让历史破图。 */
+    const deleteImageIfUnreferenced = async (
+      imageId: string,
+      data: AppData,
+    ): Promise<void> => {
+      if (collectReferencedImageIds(data).includes(imageId)) {
+        return
+      }
+      try {
+        await imageAdapter.deleteImage(imageId)
+      } catch {
+        // 图片清理是尽力而为，失败不影响主数据。
+      }
+    }
+
+    /** 把表单里的新食材落成自定义食材，同名复用已有条目。 */
+    const reconcileCustomIngredients = (
+      existing: readonly CustomIngredient[],
+      rows: readonly CustomDishIngredientRow[],
+    ): {
+      ingredients: CustomIngredient[]
+      rows: CustomDishIngredientRow[]
+    } => {
+      const ingredients = [...existing]
+      const byName = new Map(ingredients.map((item) => [item.name, item]))
+
+      const nextRows = rows.map((row) => {
+        if (row.ingredientId) {
+          const found = ingredients.find(
+            (item) => item.id === row.ingredientId,
+          )
+          return found
+            ? {
+                ...row,
+                name: found.name,
+                kcalPer100g: found.kcalPer100g,
+              }
+            : row
+        }
+
+        const found = byName.get(row.name)
+        if (found) {
+          return {
+            ...row,
+            ingredientId: found.id,
+            name: found.name,
+            kcalPer100g: found.kcalPer100g,
+          }
+        }
+
+        const created: CustomIngredient = {
+          id: createCustomIngredientId(),
+          name: row.name,
+          kcalPer100g: row.kcalPer100g,
+        }
+        ingredients.push(created)
+        byName.set(created.name, created)
+        return {
+          ...row,
+          ingredientId: created.id,
+          name: created.name,
+          kcalPer100g: created.kcalPer100g,
+        }
+      })
+
+      return { ingredients, rows: nextRows }
+    }
+
+    const saveCustomDish = async (
+      dishId: string | null,
+      input: CustomDishInput,
+    ): Promise<CustomDishActionResult> => {
+      try {
+        return await enqueue(async () => {
+          const today = clock()
+          const data = ensureToday(get().data, today)
+          const existing = dishId
+            ? (data.customDishes.find((dish) => dish.id === dishId) ?? null)
+            : null
+          if (dishId && !existing) {
+            throw new Error('找不到这道菜谱')
+          }
+
+          const fields = normalizeCustomDishInput(
+            input,
+            existing?.createdAt || today,
+          )
+          const reconciled = reconcileCustomIngredients(
+            data.customIngredients,
+            fields.ingredientRows,
+          )
+
+          let imageId = existing?.imageId ?? null
+          let writtenImageId: string | null = null
+          if (input.image) {
+            imageId = createImageId()
+            await imageAdapter.putImage(imageId, {
+              mime: input.image.mime,
+              bytes: input.image.bytes,
+            })
+            writtenImageId = imageId
+          } else if (input.image === null) {
+            imageId = null
+          }
+
+          const nextDish: CustomDish = {
+            ...fields,
+            id: existing?.id ?? createCustomDishId(),
+            imageId,
+            ingredientRows: reconciled.rows,
+            // 归档菜保持归档，且永远不进抽卡池。
+            archived: existing?.archived ?? false,
+            includeInPool: existing?.archived
+              ? false
+              : fields.includeInPool,
+          }
+
+          const customDishes = existing
+            ? data.customDishes.map((dish) =>
+                dish.id === nextDish.id ? nextDish : dish,
+              )
+            : [...data.customDishes, nextDish]
+          const next: AppData = {
+            ...data,
+            customIngredients: reconciled.ingredients,
+            customDishes,
+          }
+
+          try {
+            await saveAppData(adapter, next)
+          } catch (error) {
+            // 数据没写成功，撤掉刚写的新图，避免留下孤儿。
+            if (writtenImageId) {
+              try {
+                await imageAdapter.deleteImage(writtenImageId)
+              } catch {
+                // 忽略回滚失败。
+              }
+            }
+            throw error
+          }
+
+          set({
+            data: next,
+            todayKey: today,
+            status: 'ready',
+            error: null,
+          })
+
+          if (existing?.imageId && existing.imageId !== imageId) {
+            await deleteImageIfUnreferenced(existing.imageId, next)
+          }
+
+          return { status: 'saved', dishId: nextDish.id }
+        })
+      } catch (error) {
+        return errorResult(error)
+      }
+    }
+
+    const commitDrawResult = (
+      data: AppData,
+      todayKey: string,
+      type: MealType,
+      draw: {
+        combo: Parameters<typeof createComboCandidate>[0]
+        source: DrawSource
+        budget: MealRecord['budget']
+        tokenCount: number
+        pityCount: number
+        pityTriggered: boolean
+      },
+    ): AttemptOutcome<DrawActionResult> => {
+      const day = data.days[todayKey]!
+      const meal = day.meals[type]
+      // 抽到的可能是自制菜的隐藏套餐，部件必须按当前菜品库解析，
+      // 否则会退化成“缺失菜品”占位快照（名称是 id、没有热量和图片）。
+      const candidate = createComboCandidate(draw.combo, 'draw', draw.combo.id, {
+        dishById: buildDishLibrary(data).dishById,
+      })
+      const nextMeal: MealRecord = {
+        ...meal,
+        candidateCombos: [...meal.candidateCombos, candidate],
+        budget: draw.budget,
+      }
+      const next = replaceMeal(data, todayKey, type, nextMeal, data.stamps, {
+        ...day.tokens,
+        count: draw.tokenCount,
+      })
+
+      return {
+        next: {
+          ...next,
+          pityCount: draw.pityCount,
+        },
+        result: {
+          status: 'drawn',
+          receipt: {
+            meal: type,
+            candidate,
+            source: draw.source,
+            pityTriggered: draw.pityTriggered,
+            tokenCount: draw.tokenCount,
+            pityCount: draw.pityCount,
+          },
+        },
+      }
+    }
+
+    const redraw = (
+      data: AppData,
+      todayKey: string,
+      type: MealType,
+      candidateId: string,
+      componentId: string,
+      adCompleted: boolean,
+    ): { outcome: AttemptOutcome<RedrawActionResult>; result?: null } => {
+      const day = data.days[todayKey]!
+      const meal = day.meals[type]
+      if (meal.budget.checkedIn) {
+        return {
+          outcome: {
+            next: null,
+            result: { status: 'blocked', reason: 'checked-in' },
+          },
+        }
+      }
+      if (meal.selectedCandidateId !== candidateId) {
+        return {
+          outcome: {
+            next: null,
+            result: {
+              status: 'blocked',
+              reason: meal.selectedCandidateId ? 'not-in-pool' : 'no-selection',
+            },
+          },
+        }
+      }
+      const candidate = findCandidate(meal, candidateId)
+      if (!candidate) {
+        return {
+          outcome: {
+            next: null,
+            result: { status: 'blocked', reason: 'not-in-pool' },
+          },
+        }
+      }
+
+      const result = coreRedrawComponent(
+        {
+          meal: type,
+          candidate,
+          componentId,
+          budget: meal.budget,
+          tokenCount: validTokenCount(day, todayKey),
+          pityCount: data.pityCount,
+        },
+        {
+          rng: rng,
+          adCompleted,
+          dishCatalog: buildDishLibrary(data).dishes,
+        },
+      )
+
+      if (result.status === 'requires-ad') {
+        return { outcome: { next: null, result: { status: 'ad-required' } } }
+      }
+      if (result.status === 'blocked') {
+        return {
+          outcome: {
+            next: null,
+            result: { status: 'blocked', reason: result.reason },
+          },
+        }
+      }
+      if (result.status === 'no-candidate') {
+        return {
+          outcome: {
+            next: null,
+            result: { status: 'no-candidate', reason: result.reason },
+          },
+        }
+      }
+
+      const nextMeal = {
+        ...replaceCandidate(meal, result.candidate),
+        budget: result.budget,
+      }
+      const next = replaceMeal(data, todayKey, type, nextMeal, data.stamps, {
+        ...day.tokens,
+        count: result.tokenCount,
+      })
+
+      return {
+        outcome: {
+          next: { ...next, pityCount: result.pityCount },
+          result: { status: 'redrawn', source: result.source },
+        },
+      }
+    }
+
+    const applyCheckIn = (
+      data: AppData,
+      todayKey: string,
+      type: MealType,
+      candidate: ComboCandidateSnapshot,
+      overrides: CheckInOverrides | undefined,
+      customOnly: boolean,
+    ): AttemptOutcome<CheckInActionResult> => {
+      const day = data.days[todayKey]!
+      const meal = day.meals[type]
+      const library = buildDishLibrary(data)
+      const checked = coreCheckInMeal({
+        candidate,
+        budget: meal.budget,
+        wallet: day.tokens,
+        dateKey: todayKey,
+        dishCatalog: library.dishById,
+        ...(overrides?.eaten ? { eaten: overrides.eaten } : {}),
+        ...(overrides?.ingredientGrams
+          ? { ingredientGrams: overrides.ingredientGrams }
+          : {}),
+        ...(overrides?.customCalories
+          ? { customCalories: overrides.customCalories }
+          : {}),
+      })
+
+      if (checked.status === 'blocked') {
+        return {
+          next: null,
+          result: { status: 'blocked', reason: checked.reason },
+        }
+      }
+
+      let stamps = data.stamps
+      const stampReceipts: CheckInStampReceipt[] = []
+      for (const dishId of checked.stampDishIds) {
+        const dish = library.dishById.get(dishId)
+        if (!dish) {
+          continue
+        }
+        const previousCount = stamps[dishId]?.checkInCount ?? 0
+        stamps = recordStampCheckIn(stamps, dishId, todayKey)
+        const record = stamps[dishId]!
+        const upgrade = getStampUpgrade(previousCount, record.checkInCount)
+        const tier = getStampTier(record.checkInCount)
+        if (!tier) {
+          continue
+        }
+        stampReceipts.push({
+          dish: stampSnapshot(dish),
+          count: record.checkInCount,
+          tier,
+          dateKey: todayKey,
+          previousTier: upgrade.previousTier,
+          upgraded: upgrade.upgraded,
+        })
+      }
+
+      const finalCandidate: ComboCandidateSnapshot = {
+        ...candidate,
+        components: checked.components,
+      }
+      const nextMeal: MealRecord = {
+        ...replaceCandidate(meal, finalCandidate),
+        selectedCandidateId: candidate.id,
+        calories: checked.calories,
+        budget: checked.budget,
+      }
+      const next = replaceMeal(
+        data,
+        todayKey,
+        type,
+        nextMeal,
+        stamps,
+        checked.wallet,
+      )
+
+      return {
+        next,
+        result: {
+          status: 'checked-in',
+          receipt: {
+            meal: type,
+            name: candidate.name,
+            components: checked.components,
+            calories: checked.calories,
+            tokenRewarded: checked.tokenRewarded,
+            tokenCount: checked.wallet.count,
+            rewardKind: customOnly ? 'custom' : checked.rewardKind,
+            stamps: stampReceipts,
+          },
+        },
+      }
+    }
+
+    return {
+      status: 'idle',
+      error: null,
+      data: createEmptyAppData(initialKey),
+      todayKey: initialKey,
+      lastDiscard: null,
+
+      hydrate: async () => {
+        const currentStatus = get().status
+        if (currentStatus === 'loading' || currentStatus === 'ready') {
+          return
+        }
+
+        set({ status: 'loading', error: null })
+        try {
+          await cleanupPendingImages()
+          const today = clock()
+          const loaded = await loadAppData(adapter, today)
+          const next = ensureToday(loaded, today)
+          await saveAppData(adapter, next)
+          set({
+            data: next,
+            todayKey: today,
+            status: 'ready',
+            error: null,
+            lastDiscard: null,
+          })
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      refreshForToday: async () => {
+        try {
+          await commit((data) => data)
+          set({ lastDiscard: null })
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      updateData: async (updater) => {
+        try {
+          await commit((data) => updater(data))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      updateProfile: async (profile) => {
+        try {
+          await commit((data) => {
+            const hadProfile = data.profile !== null
+            const targetCalories = profile ? calcTargetCalories(profile) : null
+            const showCalories = profile
+              ? hadProfile
+                ? data.settings.showCalories
+                : true
+              : false
+
+            return {
+              ...data,
+              profile,
+              targetCalories,
+              settings: { ...data.settings, showCalories },
+            }
+          })
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      clearProfile: async () => {
+        await get().updateProfile(null)
+      },
+
+      setShowCalories: async (enabled) => {
+        try {
+          await commit((data) => ({
+            ...data,
+            settings: {
+              ...data.settings,
+              showCalories: data.profile === null ? false : enabled,
+            },
+          }))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      dismissProfileHint: async () => {
+        try {
+          await commit((data) => ({
+            ...data,
+            settings: { ...data.settings, profileHintDismissed: true },
+          }))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      recordStamp: async (dishId, dateKey) => {
+        try {
+          await commit((data, todayKey) => ({
+            ...data,
+            stamps: recordStampCheckIn(
+              data.stamps,
+              dishId,
+              dateKey ?? todayKey,
+            ),
+          }))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      drawMeal: async (type) => {
+        try {
+          return await attempt<DrawActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+
+            const draw = drawForMeal(
+              {
+                meal: type,
+                budget: meal.budget,
+                tokenCount: validTokenCount(day, todayKey),
+                pityCount: data.pityCount,
+                candidateComboIds: drawnComboIds(meal),
+              },
+              { rng, catalog: buildDishLibrary(data).combos },
+            )
+
+            if (draw.status === 'requires-ad') {
+              return { next: null, result: { status: 'ad-required' } }
+            }
+            if (draw.status === 'blocked') {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: draw.reason },
+              }
+            }
+
+            return commitDrawResult(data, todayKey, type, draw)
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      completeAdDraw: async (type, completed, requestedDateKey) => {
+        if (!completed) {
+          return { status: 'ad-cancelled' }
+        }
+
+        try {
+          return await attempt<DrawActionResult>((data, todayKey) => {
+            if (todayKey !== requestedDateKey) {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '日期已经翻篇啦，请重新抽卡',
+                },
+              }
+            }
+
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+
+            const tokenCount = validTokenCount(day, todayKey)
+            const allowance = getDrawAllowance(meal.budget, tokenCount)
+
+            if (!allowance.canDraw) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'no-draws' },
+              }
+            }
+            if (allowance.nextSource !== 'ad') {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '抽卡次数有变化，请重新点一次',
+                },
+              }
+            }
+
+            const draw = drawForMeal(
+              {
+                meal: type,
+                budget: meal.budget,
+                tokenCount,
+                pityCount: data.pityCount,
+                candidateComboIds: drawnComboIds(meal),
+              },
+              {
+                rng,
+                adCompleted: true,
+                catalog: buildDishLibrary(data).combos,
+              },
+            )
+
+            if (draw.status !== 'drawn') {
+              return {
+                next: null,
+                result:
+                  draw.status === 'blocked'
+                    ? { status: 'blocked', reason: draw.reason }
+                    : {
+                        status: 'stale',
+                        message: '抽卡状态有变化，请重新点一次',
+                      },
+              }
+            }
+
+            return commitDrawResult(data, todayKey, type, draw)
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      selectCombo: async (type, candidateId) => {
+        try {
+          return await attempt<SelectComboResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            if (!findCandidate(meal, candidateId)) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+            if (meal.selectedCandidateId === candidateId) {
+              return { next: null, result: { status: 'selected' } }
+            }
+
+            return {
+              next: replaceMeal(data, todayKey, type, {
+                ...meal,
+                selectedCandidateId: candidateId,
+              }),
+              result: { status: 'selected' },
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      redrawComponent: async (type, candidateId, componentId) => {
+        try {
+          return await attempt<RedrawActionResult>((data, todayKey) => {
+            const outcome = redraw(
+              data,
+              todayKey,
+              type,
+              candidateId,
+              componentId,
+              false,
+            )
+            return outcome.outcome
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      completeAdRedraw: async (
+        type,
+        candidateId,
+        componentId,
+        completed,
+        requestedDateKey,
+      ) => {
+        if (!completed) {
+          return { status: 'ad-cancelled' }
+        }
+
+        try {
+          return await attempt<RedrawActionResult>((data, todayKey) => {
+            if (todayKey !== requestedDateKey) {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '日期已经翻篇啦，请重新操作',
+                },
+              }
+            }
+
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.selectedCandidateId !== candidateId) {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '选中的套餐有变化，请重新点一次',
+                },
+              }
+            }
+            const allowance = getDrawAllowance(
+              meal.budget,
+              validTokenCount(day, todayKey),
+            )
+            if (allowance.nextSource !== 'ad') {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '抽卡次数有变化，请重新点一次',
+                },
+              }
+            }
+
+            const outcome = redraw(
+              data,
+              todayKey,
+              type,
+              candidateId,
+              componentId,
+              true,
+            )
+            if (outcome.outcome.result.status !== 'redrawn') {
+              return {
+                next: null,
+                result: {
+                  status: 'stale',
+                  message: '重抽状态有变化，请重新点一次',
+                },
+              }
+            }
+            return outcome.outcome
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      addComponent: async (type, candidateId, dishId) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+            const dish = buildDishLibrary(data).poolDishById.get(dishId)
+            if (!dish) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'missing-dish' },
+              }
+            }
+
+            try {
+              const nextCandidate = addDishComponent(candidate, dish, type)
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      addCustomComponent: async (type, candidateId, input) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+
+            try {
+              const nextCandidate = addCustomComponent(candidate, input)
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      discardComponent: async (type, candidateId, componentId) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            if (meal.selectedCandidateId !== candidateId) {
+              return {
+                next: null,
+                result: {
+                  status: 'blocked',
+                  reason: meal.selectedCandidateId
+                    ? 'not-in-pool'
+                    : 'no-selection',
+                },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+
+            try {
+              const nextCandidate = discardComponent(candidate, componentId)
+              set({
+                lastDiscard: {
+                  dateKey: todayKey,
+                  meal: type,
+                  candidateId,
+                  componentId,
+                },
+              })
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      undoDiscard: async () => {
+        const last = get().lastDiscard
+        if (!last) {
+          return { status: 'blocked', reason: 'missing-discard' }
+        }
+
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            if (last.dateKey !== todayKey) {
+              return {
+                next: null,
+                result: {
+                  status: 'blocked',
+                  reason: 'missing-discard',
+                },
+              }
+            }
+            const day = data.days[todayKey]!
+            const meal = day.meals[last.meal]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, last.candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: {
+                  status: 'blocked',
+                  reason: 'missing-discard',
+                },
+              }
+            }
+
+            try {
+              const nextCandidate = restoreComponent(
+                candidate,
+                last.componentId,
+              )
+              set({ lastDiscard: null })
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  last.meal,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'restore-conflict' },
+              }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      setComponentEaten: async (
+        type,
+        candidateId,
+        componentId,
+        eaten,
+      ) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+
+            try {
+              const nextCandidate = withComponentEaten(
+                candidate,
+                componentId,
+                eaten,
+              )
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      updateComponentGrams: async (
+        type,
+        candidateId,
+        componentId,
+        grams,
+      ) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+            const component = candidate.components.find(
+              (item) => item.id === componentId,
+            )
+            if (!component) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'component-missing' },
+              }
+            }
+
+            try {
+              const nextComponent = withComponentIngredientGrams(
+                component,
+                grams,
+              )
+              const nextCandidate = replaceComponentSnapshot(
+                candidate,
+                componentId,
+                nextComponent,
+              )
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      updateComponentCalories: async (
+        type,
+        candidateId,
+        componentId,
+        calories,
+      ) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+            const component = candidate.components.find(
+              (item) => item.id === componentId,
+            )
+            if (!component) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'component-missing' },
+              }
+            }
+
+            try {
+              const nextComponent = withCustomComponentCalories(
+                component,
+                calories,
+              )
+              const nextCandidate = replaceComponentSnapshot(
+                candidate,
+                componentId,
+                nextComponent,
+              )
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      checkInMeal: async (type, input) => {
+        try {
+          return await attempt<CheckInActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            const candidate = selectedCandidate(meal)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'no-selection' },
+              }
+            }
+
+            const outcome = applyCheckIn(
+              data,
+              todayKey,
+              type,
+              candidate,
+              input,
+              false,
+            )
+            if (outcome.result.status === 'checked-in') {
+              set({ lastDiscard: null })
+            }
+            return outcome
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      checkInCustomMeal: async (type, input) => {
+        try {
+          return await attempt<CheckInActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+
+            const id = `custom:${todayKey}:${type}:${meal.candidateCombos.length}`
+            const candidate = createCustomOnlyCandidate({
+              id,
+              name: input.name,
+              calories: input.calories,
+            })
+            const withCandidate: MealRecord = {
+              ...meal,
+              candidateCombos: [...meal.candidateCombos, candidate],
+              selectedCandidateId: candidate.id,
+            }
+            const base: AppData = replaceMeal(
+              data,
+              todayKey,
+              type,
+              withCandidate,
+            )
+            const outcome = applyCheckIn(
+              base,
+              todayKey,
+              type,
+              candidate,
+              undefined,
+              true,
+            )
+            if (outcome.result.status === 'checked-in') {
+              set({ lastDiscard: null })
+            }
+            return outcome
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      createCustomDish: async (input) => saveCustomDish(null, input),
+
+      updateCustomDish: async (dishId, input) =>
+        saveCustomDish(dishId, input),
+
+      deleteCustomDish: async (dishId) => {
+        try {
+          return await enqueue<CustomDishActionResult>(async () => {
+            const today = clock()
+            const data = ensureToday(get().data, today)
+            const existing = data.customDishes.find(
+              (dish) => dish.id === dishId,
+            )
+            if (!existing) {
+              throw new Error('找不到这道菜谱')
+            }
+
+            const mustArchive =
+              hasCheckInRecords(data, dishId) ||
+              hasAnySnapshotReference(data, { dishId })
+            if (mustArchive) {
+              if (existing.archived) {
+                return { status: 'removed', archived: true }
+              }
+              const next: AppData = {
+                ...data,
+                customDishes: data.customDishes.map((dish) =>
+                  dish.id === dishId
+                    ? { ...dish, archived: true, includeInPool: false }
+                    : dish,
+                ),
+              }
+              await saveAppData(adapter, next)
+              set({
+                data: next,
+                todayKey: today,
+                status: 'ready',
+                error: null,
+              })
+              return { status: 'removed', archived: true }
+            }
+
+            const customDishes = data.customDishes.filter(
+              (dish) => dish.id !== dishId,
+            )
+            const usedIngredientIds = new Set(
+              customDishes.flatMap((dish) =>
+                dish.ingredientRows.flatMap((row) =>
+                  row.ingredientId ? [row.ingredientId] : [],
+                ),
+              ),
+            )
+            const next: AppData = {
+              ...data,
+              customDishes,
+              customIngredients: data.customIngredients.filter((item) =>
+                usedIngredientIds.has(item.id),
+              ),
+            }
+            await saveAppData(adapter, next)
+            set({
+              data: next,
+              todayKey: today,
+              status: 'ready',
+              error: null,
+            })
+
+            if (existing.imageId) {
+              await deleteImageIfUnreferenced(existing.imageId, next)
+            }
+
+            return { status: 'removed', archived: false }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      exportBackup: async () => {
+        try {
+          return await enqueue<ExportBackupResult>(() =>
+            withDataLock(async () => {
+              const data = get().data
+              const images = new Map<string, StoredImage>()
+              for (const imageId of collectReferencedImageIds(data)) {
+                const image = await imageAdapter.getImage(imageId)
+                if (image) {
+                  images.set(imageId, image)
+                }
+              }
+
+              const bundle = buildBackup(data, images, clock())
+              return { status: 'ok', json: serializeBackup(bundle) }
+            }),
+          )
+        } catch (error) {
+          // 导出失败只回报，不影响当前记录。
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+
+      importJson: async (json) => {
+        try {
+          return await enqueue<ImportDataResult>(() =>
+            withDataLock(async () => {
+              const today = clock()
+              const parsed = parseBackupJson(json, today)
+              const fromPackage = new Set(
+                parsed.images.map((image) => image.imageId),
+              )
+
+              // 包内没有的图片必须已经在本地，否则导入后历史会破图。
+              for (const imageId of collectReferencedImageIds(parsed.data)) {
+                if (fromPackage.has(imageId)) {
+                  continue
+                }
+                const existing = await imageAdapter.getImage(imageId)
+                if (!existing) {
+                  throw new Error(
+                    '备份缺少图片，无法完整导入，请重新导出备份',
+                  )
+                }
+              }
+
+              // 先写图片，再写主数据；失败时只回滚本次新建的图片。
+              const created: string[] = []
+              for (const image of parsed.images) {
+                const existing = await imageAdapter.getImage(image.imageId)
+                if (existing) {
+                  if (
+                    existing.mime !== image.mime ||
+                    !sameBytes(existing.bytes, image.bytes)
+                  ) {
+                    throw new Error(
+                      '备份里的图片与现有图片冲突，请先清空数据再导入',
+                    )
+                  }
+                  continue
+                }
+                await imageAdapter.putImage(image.imageId, {
+                  mime: image.mime,
+                  bytes: image.bytes,
+                })
+                created.push(image.imageId)
+              }
+
+              if (created.length > 0) {
+                await adapter.set(PENDING_IMPORT_KEY, { imageIds: created })
+              }
+
+              try {
+                await saveAppData(adapter, parsed.data)
+              } catch (error) {
+                for (const imageId of created) {
+                  try {
+                    await imageAdapter.deleteImage(imageId)
+                  } catch {
+                    // 回滚尽力而为，留下孤儿图片也不会破图。
+                  }
+                }
+                try {
+                  await adapter.remove(PENDING_IMPORT_KEY)
+                } catch {
+                  // 标记清理失败会在下次启动时兜底。
+                }
+                throw error
+              }
+
+              try {
+                await adapter.remove(PENDING_IMPORT_KEY)
+              } catch {
+                // 标记清理失败会在下次启动时兜底。
+              }
+
+              set({
+                data: parsed.data,
+                todayKey: today,
+                status: 'ready',
+                error: null,
+                lastDiscard: null,
+              })
+              return { status: 'imported' }
+            }),
+          )
+        } catch (error) {
+          // 导入是用户主动操作，失败只回报，不切 BootScreen，也不动现有数据。
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+
+      clearData: async () => {
+        try {
+          return await enqueue<ClearDataResult>(async () => {
+            const today = clock()
+            await clearAppData(adapter, today)
+            set({
+              data: createEmptyAppData(today),
+              todayKey: today,
+              status: 'ready',
+              error: null,
+              lastDiscard: null,
+            })
+
+            // 主数据已经清空；图片清理失败只提示，不回滚记录。
+            try {
+              await imageAdapter.clearImages()
+            } catch (error) {
+              return {
+                status: 'error',
+                message: `记录已清空，但图片清理失败：${errorMessage(error)}`,
+              }
+            }
+            return { status: 'cleared' }
+          })
+        } catch (error) {
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+    }
+  })
+}
+
+/** 默认单例：业务代码通过它读写数据，不直接访问 localStorage。 */
+export const useAppStore = createAppStore()

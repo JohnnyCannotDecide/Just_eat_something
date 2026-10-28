@@ -1,0 +1,462 @@
+{
+  "_comment": "套餐只写部件；rarity 省略时由部件最高稀有度推导。UR 菜品只出现在 UR 套餐，UR 套餐共 3 个。",
+  "combos": [
+    {
+      "id": "b_soy_youtiao",
+      "name": "豆浆油条套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "soy_milk",
+        "youtiao",
+        "tea_egg"
+      ]
+    },
+    {
+      "id": "b_porridge_egg",
+      "name": "白粥小菜套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "rice_porridge",
+        "boiled_egg",
+        "steamed_bun",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "b_century_porridge",
+      "name": "皮蛋瘦肉粥套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "century_egg_pork_porridge",
+        "steamed_corn",
+        "steamed_sweet_potato"
+      ]
+    },
+    {
+      "id": "b_egg_pancake",
+      "name": "鸡蛋饼牛奶套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "egg_pancake",
+        "milk",
+        "apple",
+        "banana"
+      ]
+    },
+    {
+      "id": "b_xiaolongbao",
+      "name": "小笼包豆腐脑套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "xiaolongbao",
+        "tofu_pudding"
+      ]
+    },
+    {
+      "id": "b_dumplings",
+      "name": "蒸饺豆浆套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "steamed_dumplings",
+        "soy_milk"
+      ]
+    },
+    {
+      "id": "b_wonton",
+      "name": "馄饨南瓜套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "wonton_soup",
+        "steamed_pumpkin"
+      ]
+    },
+    {
+      "id": "b_oat_yogurt",
+      "name": "燕麦酸奶杯套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "oatmeal_milk",
+        "plain_yogurt",
+        "banana_oat_cup"
+      ]
+    },
+    {
+      "id": "b_toast",
+      "name": "吐司双拼套餐",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "whole_wheat_toast",
+        "avocado_toast",
+        "milk"
+      ]
+    },
+    {
+      "id": "b_chicken_porridge",
+      "name": "鸡肉粥配芋头",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "chicken_porridge",
+        "steamed_taro"
+      ]
+    },
+    {
+      "id": "b_salmon_riceball",
+      "name": "三文鱼饭团酸奶",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "salmon_riceball",
+        "fruit_yogurt_bowl"
+      ]
+    },
+    {
+      "id": "l_tomato_egg",
+      "name": "番茄炒蛋盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "tomato_egg",
+        "white_rice",
+        "spinach_egg_soup"
+      ]
+    },
+    {
+      "id": "l_chicken_salad",
+      "name": "鸡胸肉沙拉套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "chicken_salad",
+        "steamed_corn"
+      ]
+    },
+    {
+      "id": "l_mushroom_cabbage",
+      "name": "香菇圆白菜套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "mushroom_cabbage",
+        "white_rice",
+        "kung_pao_chicken"
+      ]
+    },
+    {
+      "id": "l_shrimp_egg",
+      "name": "虾仁蒸蛋套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "shrimp_steamed_egg",
+        "white_rice",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "l_beef_veg_rice",
+      "name": "牛肉杂蔬饭套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "beef_veg_rice",
+        "tomato_egg_soup"
+      ]
+    },
+    {
+      "id": "l_tofu_pot",
+      "name": "豆腐蔬菜煲套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "tofu_veg_pot",
+        "white_rice",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "l_corn_chicken",
+      "name": "玉米鸡丁套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "corn_chicken",
+        "white_rice",
+        "spinach_egg_soup"
+      ]
+    },
+    {
+      "id": "l_enoki_beef",
+      "name": "金针菇牛肉卷套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "enoki_beef_roll",
+        "steamed_corn"
+      ]
+    },
+    {
+      "id": "l_teriyaki",
+      "name": "照烧鸡腿饭套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "teriyaki_chicken_rice",
+        "tomato_egg_soup"
+      ]
+    },
+    {
+      "id": "l_egg_fried_rice",
+      "name": "蛋炒饭配黄瓜",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "egg_fried_rice",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "l_hot_sour_noodles",
+      "name": "酸辣粉套餐",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "hot_sour_noodles",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "l_plain_noodles",
+      "name": "清汤面配青菜",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "plain_noodles",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_tomato_brisket",
+      "name": "番茄牛腩面套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "tomato_brisket_noodles",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "d_salmon_avocado",
+      "name": "三文鱼牛油果饭套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "salmon_avocado_rice",
+        "spinach_egg_soup"
+      ]
+    },
+    {
+      "id": "d_shrimp_egg_rice",
+      "name": "虾仁滑蛋饭套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "shrimp_egg_rice",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_cod",
+      "name": "香煎鳕鱼套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "pan_fried_cod",
+        "white_rice",
+        "winter_melon_ribs_soup"
+      ]
+    },
+    {
+      "id": "d_mapo_tofu",
+      "name": "麻婆豆腐盖饭套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "mapo_tofu_rice",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "d_beef_pepper",
+      "name": "牛肉彩椒糙米饭套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "beef_pepper_brown_rice",
+        "tomato_egg_soup"
+      ]
+    },
+    {
+      "id": "d_pumpkin_chicken",
+      "name": "南瓜鸡肉焖饭套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "pumpkin_chicken_rice",
+        "spinach_egg_soup"
+      ]
+    },
+    {
+      "id": "d_braised_beef",
+      "name": "红烧牛肉面套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "braised_beef_noodles",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "d_sweet_sour_pork",
+      "name": "糖醋里脊套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "sweet_sour_pork",
+        "white_rice",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_steamed_sea_bass",
+      "name": "清蒸鲈鱼套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "steamed_sea_bass",
+        "white_rice",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_winter_melon_soup",
+      "name": "冬瓜排骨汤套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "winter_melon_ribs_soup",
+        "white_rice",
+        "steamed_yam"
+      ]
+    },
+    {
+      "id": "d_egg_fried_rice",
+      "name": "蛋炒饭配番茄蛋汤",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "egg_fried_rice",
+        "tomato_egg_soup"
+      ]
+    },
+    {
+      "id": "d_hot_sour_noodles",
+      "name": "酸辣粉配青菜",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "hot_sour_noodles",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_plain_noodles",
+      "name": "清汤面配番茄蛋汤",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "plain_noodles",
+        "tomato_egg_soup"
+      ]
+    },
+    {
+      "id": "d_burger",
+      "name": "芝士汉堡套餐",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "cheese_burger",
+        "cucumber_salad"
+      ]
+    },
+    {
+      "id": "d_icecream",
+      "name": "冰淇淋甜点",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "choco_icecream",
+        "banana"
+      ]
+    },
+    {
+      "id": "d_fried_chicken",
+      "name": "深夜炸鸡拼盘",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "fried_chicken_platter",
+        "cucumber_salad"
+      ]
+    }
+  ]
+}

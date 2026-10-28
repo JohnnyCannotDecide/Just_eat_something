@@ -1,0 +1,526 @@
+/* 印章系统：共享 SVG 印章、图鉴网格、印章详情、升级提示 */
+
+.dish-stamp {
+  --stamp-size: 88px;
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  width: var(--stamp-size);
+  height: var(--stamp-size);
+  place-items: center;
+  transform: rotate(var(--stamp-tilt, 0deg));
+  filter: drop-shadow(0 5px 9px rgba(107, 72, 42, 0.18));
+  line-height: 1;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.dish-stamp svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.dish-stamp--sm {
+  --stamp-size: 62px;
+  filter: drop-shadow(0 2px 4px rgba(107, 72, 42, 0.16));
+}
+
+.dish-stamp--md {
+  --stamp-size: 88px;
+  max-width: min(88px, 100%);
+  filter: drop-shadow(0 2px 4px rgba(107, 72, 42, 0.13));
+}
+
+.dish-stamp--lg {
+  --stamp-size: 142px;
+  filter: drop-shadow(0 9px 15px rgba(107, 72, 42, 0.2));
+}
+
+.dish-stamp--silhouette {
+  opacity: 0.82;
+  filter: grayscale(0.95) drop-shadow(0 2px 4px rgba(107, 72, 42, 0.1));
+}
+
+.dish-stamp--animate {
+  animation: stamp-press 0.58s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+.dish-stamp__emoji {
+  font-family: var(--font-rounded);
+  font-size: 33px;
+}
+
+.dish-stamp__rarity {
+  font-family: var(--font-rounded);
+  font-size: 7.4px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.dish-stamp__count {
+  font-family: var(--font-rounded);
+  font-size: 7.2px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dish-stamp__date {
+  font-family: var(--font-rounded);
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 时间轴末端并排的印章簇 */
+.stamp-cluster {
+  display: flex;
+  /* 不参与收缩：放不下时由 .meal-ticket__foot 换行，而不是把印章挤成竖排。 */
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  row-gap: 3px;
+}
+
+.stamp-cluster .dish-stamp {
+  --stamp-size: 44px;
+}
+
+/* 缩到 44px 后 SVG 里的字会跟着变小，按用户单位补回可读字号。 */
+.stamp-cluster .dish-stamp__rarity {
+  font-size: 10px;
+}
+
+.stamp-cluster .dish-stamp__count {
+  font-size: 9px;
+}
+
+.stamp-cluster .dish-stamp__date {
+  font-size: 9.5px;
+}
+
+.stamp-cluster__more {
+  display: inline-grid;
+  min-width: 30px;
+  height: 30px;
+  margin-left: 2px;
+  padding: 0 5px;
+  place-items: center;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: #fff8ea;
+  color: var(--cocoa-muted);
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 图鉴头部与筛选 */
+.stamp-book-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stamp-book-head__copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.stamp-add-button {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: none;
+  margin-top: 2px;
+  place-items: center;
+  border: 1.5px solid #eecb7f;
+  border-radius: 50%;
+  background: var(--butter);
+  box-shadow:
+    0 3px 0 #e5c07a,
+    0 8px 16px rgba(139, 94, 60, 0.14);
+  color: #7c5217;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1;
+  transition:
+    transform 0.14s ease,
+    box-shadow 0.14s ease;
+}
+
+.stamp-add-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #e5c07a;
+}
+
+.stamp-filter {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* 图鉴 */
+.stamp-book {
+  display: grid;
+  gap: 11px;
+}
+
+.stamp-book__hint {
+  padding: 9px 12px;
+  border: 1px dashed #dcbd93;
+  border-radius: 12px;
+  background: #fff9ee;
+  color: var(--cocoa-muted);
+  font-size: 9.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.stamp-book-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  list-style: none;
+}
+
+.stamp-book-grid > li {
+  min-width: 0;
+  /* 40 张卡片一次渲染太重，滚到附近再绘制。 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 132px;
+}
+
+.stamp-book-card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--milk);
+  box-shadow: var(--shadow-soft);
+  text-align: center;
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.stamp-book-card:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+.stamp-book-card.is-locked {
+  border-style: dashed;
+  border-color: #e3d3bd;
+  background: #fdf6e9;
+  box-shadow: none;
+}
+
+.stamp-book-card__name {
+  max-width: 100%;
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  color: var(--cocoa);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.stamp-book-card__meta {
+  max-width: 100%;
+  color: var(--cocoa-faint);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+
+.stamp-book-card.is-collected .stamp-book-card__meta {
+  color: var(--stamp-color, var(--marmalade-deep));
+}
+
+.stamp-book-card__badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--butter);
+  color: #7c5217;
+  font-size: 7.5px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.stamp-book-card.is-archived {
+  border-style: dashed;
+}
+
+.stamp-book-card.is-archived .stamp-book-card__badge {
+  background: #f0e3d0;
+  color: var(--cocoa-muted);
+}
+
+.stamp-book-card.is-archived .stamp-book-card__name {
+  color: var(--cocoa-muted);
+}
+
+/* 印章详情 */
+.stamp-detail-modal .modal__body {
+  padding-bottom: 14px;
+}
+
+.stamp-detail {
+  display: grid;
+  gap: 13px;
+}
+
+.stamp-detail__hero {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  padding: 2px 0 4px;
+}
+
+.stamp-detail__locked {
+  color: var(--cocoa-faint);
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.stamp-detail__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.stamp-detail__facts > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.stamp-detail__facts dt {
+  color: var(--cocoa-faint);
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.stamp-detail__facts dd {
+  overflow-wrap: anywhere;
+  color: var(--cocoa);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+}
+
+.stamp-detail__tip {
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--butter-soft);
+  color: #7c5217;
+  font-size: 9.5px;
+  line-height: 1.65;
+}
+
+.stamp-detail__ingredients h3 {
+  margin-bottom: 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.stamp-ingredient-list {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+}
+
+.stamp-ingredient {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--milk);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.stamp-ingredient__name {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.stamp-ingredient__meta {
+  color: var(--cocoa-faint);
+  font-size: 8px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stamp-ingredient__grams {
+  flex: none;
+  color: var(--cocoa-muted);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.stamp-detail__next {
+  padding: 9px 11px;
+  border: 1px dashed #e3c99a;
+  border-radius: 12px;
+  background: #fff9ee;
+  color: #8a6b4d;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.stamp-detail__cooking {
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--milk);
+  padding: 0 11px;
+}
+
+.stamp-detail__cooking summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 7px 0;
+  cursor: pointer;
+  color: #8a5b16;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.4;
+  list-style: none;
+}
+
+.stamp-detail__cooking summary::-webkit-details-marker {
+  display: none;
+}
+
+.stamp-detail__cooking summary::after {
+  content: ' ▾';
+  margin-left: auto;
+  padding-left: 8px;
+  font-size: 8px;
+}
+
+.stamp-detail__cooking[open] summary::after {
+  content: ' ▴';
+}
+
+.stamp-detail__steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 0 11px 17px;
+  color: var(--cocoa-muted);
+  font-size: 9.5px;
+  line-height: 1.6;
+}
+
+.stamp-detail__steps li::marker {
+  color: var(--marmalade);
+  font-weight: 800;
+}
+
+/* 详情底部可能同时出现编辑/删除/关闭三个按钮。 */
+.stamp-detail-modal .modal__footer .primary-button,
+.stamp-detail-modal .modal__footer .secondary-button,
+.stamp-detail-modal .modal__footer .danger-button {
+  width: auto;
+  min-width: 0;
+  flex: 1 1 0;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+
+/* 升级提示 */
+.reward-upgrade {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 6px;
+  margin-top: 12px;
+  padding: 7px 13px;
+  border: 1px solid
+    color-mix(in srgb, var(--stamp-color, var(--marmalade)) 42%, #f0dcc2);
+  border-radius: var(--radius-pill);
+  background: var(--stamp-soft, var(--butter-soft));
+  color: var(--cocoa);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.35;
+  animation: upgrade-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+.reward-upgrade__spark {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.reward-upgrade__path {
+  color: var(--stamp-color, var(--marmalade-deep));
+  font-size: 9px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 360px) {
+  .stamp-book-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@keyframes stamp-press {
+  0% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.45) rotate(var(--stamp-tilt, 0deg));
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(3px) scale(0.96) rotate(var(--stamp-tilt, 0deg));
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(var(--stamp-tilt, 0deg));
+  }
+}
+
+@keyframes upgrade-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
