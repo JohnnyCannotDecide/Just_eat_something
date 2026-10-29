@@ -9,6 +9,14 @@ import {
 } from '@/config/gameConfig'
 import type { ThemeName } from '@/config/gameConfig'
 import {
+  deriveStampsFromEvents,
+  legacyCheckInEventId,
+  missingCheckInEventId,
+  normalizeCheckInEvents,
+  reconcileEventsWithStamps,
+} from '@/core/checkinEvents'
+import type { CheckInEvent } from '@/core/checkinEvents'
+import {
   createLegacyCandidate,
   createLegacyCustomCandidate,
 } from '@/core/components'
@@ -56,7 +64,7 @@ import { LEGACY_COMBO_NAMES } from './legacyComboNames'
 import type { SnapshotService } from './snapshots'
 import type { StorageAdapter } from './StorageAdapter'
 
-export const APP_DATA_SCHEMA_VERSION = 5
+export const APP_DATA_SCHEMA_VERSION = 6
 export const APP_DATA_STORAGE_KEY = 'app-data'
 /** 结构损坏但仍是合法 JSON 时，原始值会先备份到这里再以空数据启动。 */
 export const APP_DATA_CORRUPT_BACKUP_KEY = 'app-data:corrupt-backup'
@@ -105,7 +113,9 @@ export interface AppData {
   pityCount: number
   /** YYYY-MM-DD → 当日记录，保留历史。 */
   days: Record<string, DailyRecord>
-  /** dishId → 印章收藏。 */
+  /** 追加型打卡事件；次数和等级由这里推导。 */
+  checkinEvents: CheckInEvent[]
+  /** dishId → 印章缓存；始终由 checkinEvents 重建，仅作读取加速。 */
   stamps: Record<string, StampRecord>
   /** 用户自建的食材。 */
   customIngredients: CustomIngredient[]
@@ -124,6 +134,7 @@ const APP_DATA_MIGRATIONS: Record<number, AppDataMigration> = {
   3: migrateV2ToV3,
   4: migrateV3ToV4,
   5: migrateV4ToV5,
+  6: migrateV5ToV6,
 }
 
 export function createMealRecord(): MealRecord {
@@ -448,6 +459,72 @@ export function migrateV4ToV5(raw: UnknownRecord): UnknownRecord {
   return { ...raw, schemaVersion: 5, days }
 }
 
+/**
+ * v5 → v6：把印章缓存展开成追加型事件。
+ * - 每个 checkInDates 项生成确定性 id 的非 synthetic 事件；
+ * - checkInCount 比日期多出的部分用 synthetic 占位补齐，次数不下降；
+ * - 已有合法 checkinEvents 原样保留（去重），未知字段逐层 spread 保留。
+ */
+export function migrateV5ToV6(raw: UnknownRecord): UnknownRecord {
+  if (typeof raw.schemaVersion === 'number' && raw.schemaVersion >= 6) {
+    return raw
+  }
+
+  const existing = normalizeCheckInEvents(raw.checkinEvents)
+  const dishesWithEvents = new Set(existing.map((event) => event.dishId))
+  const events: CheckInEvent[] = [...existing]
+
+  if (isRecord(raw.stamps)) {
+    for (const dishId of Object.keys(raw.stamps).sort()) {
+      if (dishesWithEvents.has(dishId)) {
+        continue
+      }
+      const rawStamp = raw.stamps[dishId]
+      if (!isRecord(rawStamp)) {
+        continue
+      }
+
+      const dates = Array.isArray(rawStamp.checkInDates)
+        ? rawStamp.checkInDates.filter(
+            (item): item is string => typeof item === 'string',
+          )
+        : []
+      const storedCount =
+        typeof rawStamp.checkInCount === 'number' &&
+        Number.isInteger(rawStamp.checkInCount) &&
+        rawStamp.checkInCount >= 0
+          ? rawStamp.checkInCount
+          : 0
+      const firstCheckInDate =
+        typeof rawStamp.firstCheckInDate === 'string'
+          ? rawStamp.firstCheckInDate
+          : (dates[0] ?? '')
+
+      dates.forEach((dateKey, index) => {
+        events.push({
+          id: legacyCheckInEventId(dishId, dateKey, index),
+          dishId,
+          dateKey,
+          createdAt: index,
+        })
+      })
+
+      const missing = Math.max(0, storedCount - dates.length)
+      for (let index = 0; index < missing; index += 1) {
+        events.push({
+          id: missingCheckInEventId(dishId, index),
+          dishId,
+          dateKey: firstCheckInDate || dates[0] || '1970-01-01',
+          createdAt: 0,
+          synthetic: true,
+        })
+      }
+    }
+  }
+
+  return { ...raw, schemaVersion: 6, checkinEvents: events }
+}
+
 function migrateV1Day(rawDay: UnknownRecord, dateKey: string): UnknownRecord {
   const rawMeals = isRecord(rawDay.meals) ? rawDay.meals : {}
   const meals: UnknownRecord = {}
@@ -622,6 +699,7 @@ export function createEmptyAppData(todayKey: string = toDateKey()): AppData {
     targetCalories: null,
     pityCount: 0,
     days: { [todayKey]: createDailyRecord(todayKey) },
+    checkinEvents: [],
     stamps: {},
     customIngredients: [],
     customDishes: [],
@@ -736,13 +814,23 @@ export function normalizeAppData(
     : normalizeStandaloneTarget(source.targetCalories)
   const pityCount = normalizeNonNegativeInteger(source.pityCount, 'pityCount')
 
+  // 先补事件再重建缓存：旧缓存里多出的次数会变成确定性事件，
+  // 保证归一化只增不减，且二次执行不再追加。
+  const cachedStamps = normalizeStamps(source.stamps)
+  const checkinEvents = reconcileEventsWithStamps(
+    normalizeCheckInEvents(source.checkinEvents),
+    cachedStamps,
+  )
+  const stamps = deriveStampsFromEvents(checkinEvents, cachedStamps)
+
   const data: AppData = {
     schemaVersion: APP_DATA_SCHEMA_VERSION,
     profile,
     targetCalories,
     pityCount,
     days: normalizeDays(source.days),
-    stamps: normalizeStamps(source.stamps),
+    checkinEvents,
+    stamps,
     customIngredients: normalizeCustomIngredients(source.customIngredients),
     customDishes: normalizeCustomDishes(source.customDishes),
     settings: normalizeSettings(source.settings, profile),

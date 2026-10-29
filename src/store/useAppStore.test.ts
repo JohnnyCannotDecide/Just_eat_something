@@ -275,7 +275,7 @@ describe('useAppStore', () => {
       theme: 'cute',
     })
     await expect(adapter.get(APP_DATA_STORAGE_KEY)).resolves.toMatchObject({
-      schemaVersion: 5,
+      schemaVersion: 6,
       settings: {
         showCalories: true,
         profileHintDismissed: true,
@@ -483,7 +483,7 @@ describe('useAppStore', () => {
     const lunch = state.data.days[DAY_1]!.meals.lunch
     const candidate = lunch.candidateCombos[0]!
 
-    expect(state.data.schemaVersion).toBe(5)
+    expect(state.data.schemaVersion).toBe(6)
     expect(state.data.pityCount).toBe(2)
     expect(candidate.id).toBe(`legacy:${DAY_1}:lunch:white_rice`)
     expect(lunch.selectedCandidateId).toBe(candidate.id)
@@ -1725,6 +1725,87 @@ describe('stamp tiers', () => {
     })
     expect(record?.checkInDates).toHaveLength(7)
     expect(record?.checkInDates.at(-1)).toBe('2026-11-02')
+  })
+})
+
+describe('append-only check-in events', () => {
+  it('recordStamp appends one event per check-in and survives a reload', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+
+    await ctx.store.getState().recordStamp('dish_a', DAY_1)
+    await ctx.store.getState().recordStamp('dish_a', DAY_1)
+
+    const data = ctx.store.getState().data
+    const events = data.checkinEvents.filter(
+      (event) => event.dishId === 'dish_a',
+    )
+    expect(events).toHaveLength(2)
+    expect(new Set(events.map((event) => event.id)).size).toBe(2)
+    expect(data.stamps.dish_a).toEqual({
+      checkInCount: 2,
+      firstCheckInDate: DAY_1,
+      checkInDates: [DAY_1, DAY_1],
+    })
+
+    const reopened = reopen(ctx)
+    await reopened.getState().hydrate()
+    const reloaded = reopened.getState().data
+    expect(reloaded.stamps.dish_a?.checkInCount).toBe(2)
+    expect(
+      reloaded.checkinEvents.filter((event) => event.dishId === 'dish_a'),
+    ).toHaveLength(2)
+  })
+
+  it('a formal check-in appends an event for each stamped dish', async () => {
+    const { store } = setup()
+    await store.getState().hydrate()
+    const todayKey = store.getState().todayKey
+    const candidate = createLegacyCandidate({
+      dateKey: todayKey,
+      meal: 'breakfast',
+      dishId: 'white_rice',
+      eaten: true,
+    })
+
+    await store.getState().updateData((data) => {
+      const day = data.days[todayKey]!
+      return {
+        ...data,
+        days: {
+          ...data.days,
+          [todayKey]: {
+            ...day,
+            meals: {
+              ...day.meals,
+              breakfast: {
+                ...day.meals.breakfast,
+                candidateCombos: [candidate],
+                selectedCandidateId: candidate.id,
+              },
+            },
+          },
+        },
+      }
+    })
+
+    const result = await store.getState().checkInMeal('breakfast')
+    expect(result.status).toBe('checked-in')
+    if (result.status !== 'checked-in') return
+
+    const data = store.getState().data
+    expect(
+      data.checkinEvents.filter((event) => event.dishId === 'white_rice'),
+    ).toHaveLength(1)
+    expect(data.stamps.white_rice).toMatchObject({
+      checkInCount: 1,
+      firstCheckInDate: todayKey,
+      checkInDates: [todayKey],
+    })
+    expect(result.receipt.stamps[0]).toMatchObject({
+      count: 1,
+      tier: 'bronze',
+    })
   })
 })
 

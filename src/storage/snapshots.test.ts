@@ -72,7 +72,7 @@ describe('snapshot service', () => {
     expect(meta.sizeBytes).toBe(
       new TextEncoder().encode(raw).length + 2,
     )
-    expect(meta.appSchemaVersion).toBe(5)
+    expect(meta.appSchemaVersion).toBe(6)
 
     const payload = await snapshots.read(meta.id)
     expect(payload?.raw).toBe(raw)
@@ -104,7 +104,7 @@ describe('snapshot service', () => {
 
     const payload = await snapshots.read(meta.id)
     expect(payload?.raw).toBe(serializeAppData(data))
-    expect(meta.appSchemaVersion).toBe(5)
+    expect(meta.appSchemaVersion).toBe(6)
   })
 
   it('keeps only the newest 10 snapshots and removes their payloads', async () => {

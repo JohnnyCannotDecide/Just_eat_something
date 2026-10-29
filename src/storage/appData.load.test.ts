@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { getStampTier } from '@/core/stamps'
 import { createMemorySnapshots } from '@/test/fakes'
 import { clearTestStorage } from '@/test/storage'
 
@@ -7,6 +8,7 @@ import v1Fixture from './__fixtures__/app-data-v1.json'
 import v2Fixture from './__fixtures__/app-data-v2.json'
 import v3Fixture from './__fixtures__/app-data-v3.json'
 import v4Fixture from './__fixtures__/app-data-v4.json'
+import v5Fixture from './__fixtures__/app-data-v5.json'
 import {
   APP_DATA_CORRUPT_BACKUP_KEY,
   APP_DATA_SCHEMA_VERSION,
@@ -183,6 +185,52 @@ describe('loadAppData', () => {
     expect(await adapter.getRaw(APP_DATA_STORAGE_KEY)).toBe(stored)
   })
 
+  it('migrates a v5 fixture to v6 without changing stamp counts or levels', async () => {
+    const { adapter, snapshots } = setup()
+    const fixtureRaw = JSON.stringify(v5Fixture, null, 2)
+    await adapter.setRaw(APP_DATA_STORAGE_KEY, fixtureRaw)
+
+    const result = await loadAppData(adapter, DAY, { snapshots })
+
+    expect(result.status).toBe('migrated')
+    expect(result.sourceVersion).toBe(5)
+    expect(result.data.schemaVersion).toBe(APP_DATA_SCHEMA_VERSION)
+
+    expect(result.data.stamps.soy_milk?.checkInCount).toBe(3)
+    expect(result.data.stamps.soy_milk?.firstCheckInDate).toBe('2026-10-25')
+    expect(result.data.stamps.soy_milk?.checkInDates).toEqual([
+      '2026-10-25',
+      '2026-10-25',
+      '2026-10-26',
+    ])
+    expect(result.data.stamps.beef_veg_rice?.checkInCount).toBe(8)
+    expect(result.data.stamps.beef_veg_rice?.checkInDates).toHaveLength(6)
+    expect(result.data.stamps.white_rice?.checkInCount).toBe(0)
+    expect(appSchemaTiers(result.data.stamps)).toEqual({
+      soy_milk: 'silver',
+      beef_veg_rice: 'gold',
+      white_rice: null,
+      'custom_dish:test-v5': 'bronze',
+    })
+
+    const snapshot = await snapshots.read(result.snapshotId!)
+    expect(snapshot?.raw).toBe(fixtureRaw)
+    await expect(snapshots.list()).resolves.toMatchObject([
+      { reason: 'migration', appSchemaVersion: 5 },
+    ])
+
+    const stored = await adapter.getRaw(APP_DATA_STORAGE_KEY)
+    expect(JSON.parse(stored!).schemaVersion).toBe(APP_DATA_SCHEMA_VERSION)
+    expect(
+      JSON.parse(stored!).checkinEvents.length,
+    ).toBeGreaterThanOrEqual(12)
+
+    const second = await loadAppData(adapter, DAY, { snapshots })
+    expect(second.status).toBe('ok')
+    await expect(snapshots.list()).resolves.toHaveLength(1)
+    expect(await adapter.getRaw(APP_DATA_STORAGE_KEY)).toBe(stored)
+  })
+
   it('is idempotent: a second load reports ok and adds no snapshot', async () => {
     const { adapter, snapshots } = setup()
     await adapter.setRaw(APP_DATA_STORAGE_KEY, JSON.stringify(v1Fixture))
@@ -348,6 +396,17 @@ describe('loadAppData', () => {
   })
 })
 
+function appSchemaTiers(
+  stamps: Record<string, { checkInCount: number }>,
+): Record<string, ReturnType<typeof getStampTier>> {
+  return Object.fromEntries(
+    Object.entries(stamps).map(([dishId, stamp]) => [
+      dishId,
+      getStampTier(stamp.checkInCount),
+    ]),
+  )
+}
+
 /** 只做当前版本合法底稿，避免从磁盘读。 */
 function createEmptyLike() {
   return {
@@ -356,6 +415,7 @@ function createEmptyLike() {
     targetCalories: null,
     pityCount: 0,
     days: {},
+    checkinEvents: [],
     stamps: {},
     customIngredients: [],
     customDishes: [],

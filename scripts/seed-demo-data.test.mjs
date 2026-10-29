@@ -32,8 +32,9 @@ const json = execFileSync(
 const data = parseAppDataJson(json, TODAY)
 
 describe('seed-demo-data', () => {
-  it('produces a valid, importable v4 backup under the size limit', () => {
-    expect(data.schemaVersion).toBe(5)
+  it('produces a valid, importable v6 backup under the size limit', () => {
+    expect(data.schemaVersion).toBe(6)
+    expect(data.checkinEvents.length).toBeGreaterThan(0)
     expect(data.profile).not.toBeNull()
     expect(Buffer.byteLength(json)).toBeLessThan(2 * 1024 * 1024)
     expect(Object.keys(data.days)).toHaveLength(38)

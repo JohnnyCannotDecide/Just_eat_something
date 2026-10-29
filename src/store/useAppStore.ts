@@ -4,6 +4,11 @@ import {
   customDishAllowedRarities,
 } from '@/config/gameConfig'
 import type { ThemeName } from '@/config/gameConfig'
+import {
+  createCheckInEvent,
+  deriveStampsFromEvents,
+} from '@/core/checkinEvents'
+import type { CheckInEvent } from '@/core/checkinEvents'
 import { toDateKey } from '@/core/dateKey'
 import {
   addCustomComponent,
@@ -68,7 +73,6 @@ import {
   ensureToday,
   loadAppData,
   parseAppDataJson,
-  recordStampCheckIn,
   saveAppData,
 } from '@/storage/appData'
 import type { AppData, DailyRecord, MealRecord } from '@/storage/appData'
@@ -498,10 +502,12 @@ function replaceMeal(
   nextMeal: MealRecord,
   stamps: AppData['stamps'] = data.stamps,
   tokens?: DailyRecord['tokens'],
+  checkinEvents: AppData['checkinEvents'] = data.checkinEvents,
 ): AppData {
   const day = data.days[todayKey]!
   return {
     ...data,
+    checkinEvents,
     stamps,
     days: {
       ...data.days,
@@ -655,6 +661,8 @@ function normalizeCustomDishInput(
 export interface AppStoreOptions {
   snapshots?: SnapshotService
   namespace?: StorageNamespace
+  /** 打卡事件时间戳；测试可注入固定时钟。 */
+  now?: () => number
 }
 
 export function createAppStore(
@@ -668,6 +676,7 @@ export function createAppStore(
     const initialKey = clock()
     const snapshots = options.snapshots ?? snapshotService
     const lockName = dataTransferLockName(options.namespace ?? 'prod')
+    const now = options.now ?? (() => Date.now())
     let queue: Promise<unknown> = Promise.resolve()
 
     const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
@@ -1134,15 +1143,28 @@ export function createAppStore(
         }
       }
 
-      let stamps = data.stamps
-      const stampReceipts: CheckInStampReceipt[] = []
+      const newEvents: CheckInEvent[] = []
+      const receiptInputs: { dishId: string; previousCount: number }[] = []
       for (const dishId of checked.stampDishIds) {
         const dish = library.dishById.get(dishId)
         if (!dish) {
           continue
         }
-        const previousCount = stamps[dishId]?.checkInCount ?? 0
-        stamps = recordStampCheckIn(stamps, dishId, todayKey)
+        receiptInputs.push({
+          dishId,
+          previousCount: data.stamps[dishId]?.checkInCount ?? 0,
+        })
+        newEvents.push(createCheckInEvent(dishId, todayKey, now()))
+      }
+
+      const checkinEvents = [...data.checkinEvents, ...newEvents]
+      const stamps = deriveStampsFromEvents(checkinEvents, data.stamps)
+      const stampReceipts: CheckInStampReceipt[] = []
+      for (const { dishId, previousCount } of receiptInputs) {
+        const dish = library.dishById.get(dishId)
+        if (!dish) {
+          continue
+        }
         const record = stamps[dishId]!
         const upgrade = getStampUpgrade(previousCount, record.checkInCount)
         const tier = getStampTier(record.checkInCount)
@@ -1176,6 +1198,7 @@ export function createAppStore(
         nextMeal,
         stamps,
         checked.wallet,
+        checkinEvents,
       )
 
       return {
@@ -1354,14 +1377,17 @@ export function createAppStore(
 
       recordStamp: async (dishId, dateKey) => {
         try {
-          await commit((data, todayKey) => ({
-            ...data,
-            stamps: recordStampCheckIn(
-              data.stamps,
-              dishId,
-              dateKey ?? todayKey,
-            ),
-          }))
+          await commit((data, todayKey) => {
+            const checkinEvents = [
+              ...data.checkinEvents,
+              createCheckInEvent(dishId, dateKey ?? todayKey, now()),
+            ]
+            return {
+              ...data,
+              checkinEvents,
+              stamps: deriveStampsFromEvents(checkinEvents, data.stamps),
+            }
+          })
         } catch (error) {
           fail(error)
         }

@@ -468,6 +468,33 @@ function collectStamps(days) {
   return stamps
 }
 
+/** 种子数据同样只写 v6 追加型事件，印章缓存由事件推导。 */
+function buildCheckInEvents(stamps) {
+  const events = []
+  for (const dishId of Object.keys(stamps).sort()) {
+    const stamp = stamps[dishId]
+    stamp.checkInDates.forEach((dateKey, index) => {
+      events.push({
+        id: `legacy:${dishId}:${dateKey}:${index}`,
+        dishId,
+        dateKey,
+        createdAt: index,
+      })
+    })
+    const missing = Math.max(0, stamp.checkInCount - stamp.checkInDates.length)
+    for (let index = 0; index < missing; index += 1) {
+      events.push({
+        id: `legacy:${dishId}:missing:${index}`,
+        dishId,
+        dateKey: stamp.firstCheckInDate || stamp.checkInDates[0] || '1970-01-01',
+        createdAt: 0,
+        synthetic: true,
+      })
+    }
+  }
+  return events
+}
+
 export function buildSeedData({
   todayKey = toDateKey(),
   days = DEFAULTS.days,
@@ -493,8 +520,10 @@ export function buildSeedData({
     }
   }
 
+  const stamps = collectStamps(dayMap)
+
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     profile: {
       sex: 'female',
       age: 30,
@@ -506,7 +535,8 @@ export function buildSeedData({
     targetCalories: 1800,
     pityCount: 3,
     days: dayMap,
-    stamps: collectStamps(dayMap),
+    checkinEvents: buildCheckInEvents(stamps),
+    stamps,
     settings: {
       showCalories: true,
       profileHintDismissed: true,

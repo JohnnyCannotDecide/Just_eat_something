@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { createMealDrawBudget } from '@/core/drawBudget'
+import { getStampTier } from '@/core/stamps'
 import { createTokenWallet, isTokenValid } from '@/core/tokens'
 
 import {
@@ -11,12 +12,14 @@ import {
   migrateV2ToV3,
   migrateV3ToV4,
   migrateV4ToV5,
+  migrateV5ToV6,
   normalizeAppData,
   parseAppDataJson,
   recordStampCheckIn,
   serializeAppData,
 } from './appData'
 import v4Fixture from './__fixtures__/app-data-v4.json'
+import v5Fixture from './__fixtures__/app-data-v5.json'
 
 const DAY_0 = '2026-10-26'
 const DAY_1 = '2026-10-27'
@@ -137,8 +140,8 @@ describe('AppData defaults', () => {
     const data = createEmptyAppData(DAY_1)
     const day = data.days[DAY_1]!
 
-    expect(APP_DATA_SCHEMA_VERSION).toBe(5)
-    expect(data.schemaVersion).toBe(5)
+    expect(APP_DATA_SCHEMA_VERSION).toBe(6)
+    expect(data.schemaVersion).toBe(6)
     expect(data.profile).toBeNull()
     expect(data.targetCalories).toBeNull()
     expect(data.pityCount).toBe(0)
@@ -278,7 +281,7 @@ describe('v1 → v2 migration', () => {
 
     const lunch = data.days[DAY_1]!.meals.lunch
 
-    expect(data.schemaVersion).toBe(5)
+    expect(data.schemaVersion).toBe(6)
     expect(lunch.candidateCombos.map((item) => item.comboId)).toEqual([
       null,
       null,
@@ -567,7 +570,7 @@ describe('v1 → v2 migration', () => {
     expect(once.schemaVersion).toBe(2)
 
     const again = normalizeAppData(once, DAY_1)
-    expect(again.schemaVersion).toBe(5)
+    expect(again.schemaVersion).toBe(6)
     expect(normalizeAppData(again, DAY_1)).toEqual(again)
 
     const v2Raw = v2Data()
@@ -608,7 +611,7 @@ describe('v2 → v3 migration', () => {
       DAY_1,
     )
 
-    expect(data.schemaVersion).toBe(5)
+    expect(data.schemaVersion).toBe(6)
     expect(data.settings).toEqual({
       showCalories: true,
       profileHintDismissed: true,
@@ -782,7 +785,7 @@ describe('v4 → v5 migration', () => {
     const data = normalizeAppData(v4Fixture, DAY_1)
     const day = data.days['2026-10-26']!
 
-    expect(data.schemaVersion).toBe(5)
+    expect(data.schemaVersion).toBe(6)
 
     // 已打卡历史不追溯，seen 为空数组。
     expect(
@@ -878,6 +881,108 @@ describe('v4 → v5 migration', () => {
         .components as Record<string, unknown>[]
     )[0]!
     expect(component.seenDishIds).toEqual(['test_dish', 'test_prev'])
+  })
+})
+
+describe('v5 → v6 migration', () => {
+  it('turns stamps into append-only events without changing counts or tiers', () => {
+    const raw = migrateV5ToV6(v5Fixture)
+    const data = normalizeAppData(v5Fixture, DAY_1)
+
+    expect(raw.schemaVersion).toBe(6)
+    expect(Array.isArray(raw.checkinEvents)).toBe(true)
+    expect(data.schemaVersion).toBe(APP_DATA_SCHEMA_VERSION)
+
+    for (const [dishId, before] of Object.entries(v5Fixture.stamps)) {
+      const after = data.stamps[dishId]!
+      expect(after.checkInCount).toBe(before.checkInCount)
+      expect(after.firstCheckInDate).toBe(before.firstCheckInDate)
+      expect(after.checkInDates).toEqual(before.checkInDates)
+      expect(getStampTier(after.checkInCount)).toBe(
+        getStampTier(before.checkInCount),
+      )
+    }
+
+    // 同日重复打卡保留为多个事件，不会合并。
+    expect(
+      data.checkinEvents.filter((event) => event.dishId === 'soy_milk'),
+    ).toHaveLength(3)
+    // count 比日期多出的部分用 synthetic 事件补齐。
+    const beefEvents = data.checkinEvents.filter(
+      (event) => event.dishId === 'beef_veg_rice',
+    )
+    expect(beefEvents).toHaveLength(8)
+    expect(
+      beefEvents.filter((event) => event.synthetic === true),
+    ).toHaveLength(2)
+
+    // 迁移是逐层 spread，未知字段不会丢。
+    expect(raw.unknownRootField).toBe('keep-root')
+    const rawDay = (raw.days as Record<string, Record<string, unknown>>)[
+      '2026-10-26'
+    ]!
+    expect(rawDay.unknownDayField).toBe('keep-day')
+    expect(
+      (rawDay.meals as Record<string, Record<string, unknown>>).breakfast!
+        .unknownMealField,
+    ).toBe('keep-meal')
+    expect(
+      (raw.settings as Record<string, unknown>).unknownSettingField,
+    ).toBe('keep-setting')
+
+    // 自制数据与保底保持原样；目标热量继续由档案推导。
+    expect(data.pityCount).toBe(4)
+    expect(data.targetCalories).toBeTypeOf('number')
+    expect(data.customDishes.map((dish) => dish.id)).toEqual([
+      'custom_dish:test-v5',
+    ])
+    expect(data.customIngredients.map((item) => item.id)).toEqual([
+      'custom_ingredient:test-v5',
+    ])
+  })
+
+  it('is idempotent and returns v6 data by reference', () => {
+    const once = migrateV5ToV6(v5Fixture)
+    expect(migrateV5ToV6(once)).toBe(once)
+
+    const v6 = { schemaVersion: 6 }
+    expect(migrateV5ToV6(v6)).toBe(v6)
+
+    const data = normalizeAppData(v5Fixture, DAY_1)
+    expect(normalizeAppData(data, DAY_1)).toEqual(data)
+    expect(
+      normalizeAppData(parseAppDataJson(serializeAppData(data), DAY_1), DAY_1),
+    ).toEqual(data)
+  })
+
+  it('keeps stub-looking data from crashing and preserves existing events', () => {
+    const raw = migrateV5ToV6({
+      schemaVersion: 5,
+      checkinEvents: [
+        {
+          id: 'existing',
+          dishId: 'dish',
+          dateKey: DAY_1,
+          createdAt: 10,
+        },
+        {
+          id: 'existing',
+          dishId: 'dish',
+          dateKey: DAY_2,
+          createdAt: 11,
+        },
+      ],
+    })
+
+    expect(raw.schemaVersion).toBe(6)
+    expect(raw.checkinEvents).toEqual([
+      {
+        id: 'existing',
+        dishId: 'dish',
+        dateKey: DAY_1,
+        createdAt: 10,
+      },
+    ])
   })
 })
 

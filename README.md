@@ -191,7 +191,8 @@ npm run seed:demo  # 生成可导入的演示存档（仅开发用，见第 11 �
 ## 6. 数据与备份
 
 - 业务代码只通过 `src/storage` 的端口读写，禁止直接调用 `localStorage` 或 `IndexedDB`：`StorageAdapter` 管 JSON，`BinaryStorageAdapter` 管图片，`AppStorage` 门面同时实现两者，业务侧只 import `storage` / `imageStorage`。
-- `LocalStorageAdapter` 的键前缀是 `diet-diary:`，主数据键是 `app-data`，当前 `schemaVersion = 5`。测试只使用 `test_diet-diary:`，开发种子只使用 `dev_diet-diary:`，二者都不会碰正式键。
+- `LocalStorageAdapter` 的键前缀是 `diet-diary:`，主数据键是 `app-data`，当前 `schemaVersion = 6`。测试只使用 `test_diet-diary:`，开发种子只使用 `dev_diet-diary:`，二者都不会碰正式键。
+- 打卡记录是**追加型事件**：`checkinEvents` 是唯一事实来源（每次正式打卡按菜品追加一条，同日重复打卡就是多条），`stamps` 只是由事件推导的缓存（次数 / 等级 / 日期）。事件只增不改，后续云同步用它做并集合并；`stamps` 不再作为独立写入口。
 - 自制菜图片存在 `IndexedDB`（库 `diet-diary`，store `images`），主数据只在 `customDishes`、部件快照等处保存 `imageId`（`img:<uuid>`）。渲染时按需读取并转成 object URL，组件卸载即回收。
 - 本地快照存在独立 `IndexedDB`（库 `diet-diary-snapshots`，store `meta` / `payloads`），保存 raw 存档与相关图片，保留最近 10 份。升级、清空、导入、恢复、清除档案前都会自动创建；快照写失败时破坏性操作直接中止。
 - 图片写入顺序为「先图后数据」；换图时新图写入成功、数据保存成功后才删除旧图，且只有确认没有任何地方引用时才删，避免历史破图。
@@ -211,7 +212,11 @@ npm run seed:demo  # 生成可导入的演示存档（仅开发用，见第 11 �
   - 每个部件槽位补上 `seenDishIds`：开放中的候选以当前菜开局（`[dishId]`），自定义部件为空数组；已打卡历史一律为空，不追溯。重抽时据此排除本轮出现过的菜，耗尽后洗牌。
   - 每餐补上 `drawnComboIds`（本轮已抽到的套餐 id）。旧数据缺省时从候选的 `comboId` 去重推导，保持“已抽过的不再重复”的行为。
   - 未知字段、印章、券、保底、历史与自制数据都不变；迁移是纯函数、幂等，迁移前自动快照。
-- 存档的 `schemaVersion` 高于当前应用支持的 5 时拒绝启动，避免旧版本覆盖新数据。
+- 旧存档迁移（v5 → v6）：
+  - 每个印章的 `checkInDates` 展开成确定性 id 的事件（`legacy:<dishId>:<dateKey>:<index>`，同日多次靠下标区分），`createdAt` 用 dish 内下标，推导出的日期顺序与原数组一致。
+  - `checkInCount` 大于日期数的部分生成 `synthetic` 占位事件，只计入次数、不进入日期列表，保证次数与铜 / 银 / 金等级完全不变。
+  - 已有合法 `checkinEvents` 会去重保留；未知字段逐层 `spread` 保留；迁移幂等，迁移前自动快照。
+- 存档的 `schemaVersion` 高于当前应用支持的 6 时拒绝启动，避免旧版本覆盖新数据。
 - 首次打开直接进入「今日」页，不需要先填档案；游客也能看到菜品、套餐、每餐与当日合计热量，只有「目标 / 余量 / 进度条」需要填档案（该位置显示「填写档案查看余量」入口）。
 - 设置页提供：
   - **个人档案**（可选）：填写后自动计算目标热量，并显示目标 / 余量 / 进度条；可手动覆盖目标、单独切换「显示热量」、清除档案。保存或清除档案都不会改变「显示热量」开关（v3 起默认开启，超出目标用中性的「超出 xx kcal」文案，不做红色警示）。
@@ -289,7 +294,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 - 时间轴餐卡底部的并排印章缩到 44px 后，SVG 里的日期 / 次数文字只是装饰（约 4~5px），可读信息请到图鉴或日详情查看；印章簇放不下时会整行换行，不会挤压变形。
 - 390px 是设计基准；320~360px 只做基础兜底，刘海 / 挖孔屏横屏时安全区内边距封顶 28px，内容仍可能比常规机型窄。
 - 浏览器隐私模式或禁用 IndexedDB 时图片无法保存/读取，自制菜会退回 emoji，已有图片在页面上可能不显示。
-- **schemaVersion 已升到 5**：v4 旧构建读到 v5 存档会按「版本高于应用支持」进入恢复页，不会覆盖数据，但也无法继续使用；升级后请不要回退到旧版本再保存。
+- **schemaVersion 已升到 6**：v5 旧构建读到 v6 存档会按「版本高于应用支持」进入恢复页，不会覆盖数据，但也无法继续使用；升级后请不要回退到旧版本再保存。
 - 广告是本地模拟，未接入真实 SDK。
 - 云同步仅有接口占位（`CloudSyncAdapter` 会明确抛错）。
 - 日历只读展示历史，不支持补打卡或修改过去的记录。
@@ -301,7 +306,7 @@ npm run preview -- --host 127.0.0.1 --port 4173
 
 ## 11. 开发用演示数据
 
-`scripts/seed-demo-data.mjs` 用固定伪随机种子生成一份可以直接导入的 v5 存档，用来检查月历、连续打卡、断签和只读详情。它只读取 `src/data/*.json` 在 Node 里拼装模拟记录，**不参与构建**：脚本在 `src/` 之外，`dist/` 里不会出现它，也不会出现任何演示数据。
+`scripts/seed-demo-data.mjs` 用固定伪随机种子生成一份可以直接导入的 v6 存档，用来检查月历、连续打卡、断签和只读详情。它只读取 `src/data/*.json` 在 Node 里拼装模拟记录，**不参与构建**：脚本在 `src/` 之外，`dist/` 里不会出现它，也不会出现任何演示数据。
 
 ```bash
 npm run seed:demo                              # 默认：往前 45 天，写入 .local/seed-demo-data.json

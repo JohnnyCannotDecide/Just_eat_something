@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 5,
+  "profile": {
+    "sex": "female",
+    "age": 30,
+    "heightCm": 165,
+    "weightKg": 60,
+    "activity": "sedentary",
+    "goal": "maintain",
+    "unknownProfileField": "keep-profile"
+  },
+  "targetCalories": 1800,
+  "pityCount": 4,
+  "unknownRootField": "keep-root",
+  "days": {
+    "2026-10-26": {
+      "dateKey": "2026-10-26",
+      "unknownDayField": "keep-day",
+      "tokens": {
+        "dateKey": "2026-10-26",
+        "count": 2,
+        "customRewardClaimed": true
+      },
+      "meals": {
+        "breakfast": {
+          "unknownMealField": "keep-meal",
+          "candidateCombos": [
+            {
+              "id": "draw:2026-10-26:breakfast:0",
+              "comboId": "b_soy_youtiao",
+              "source": "draw",
+              "name": "豆浆油条套餐",
+              "nameSource": "auto",
+              "baseName": "豆浆油条套餐",
+              "baseDishIds": ["soy_milk", "youtiao"],
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "comp:combo:soy-milk:1",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "soy_milk",
+                  "name": "豆浆",
+                  "category": "drink",
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": 300,
+                  "calories": 90,
+                  "eaten": true,
+                  "discarded": false,
+                  "seenDishIds": []
+                }
+              ]
+            }
+          ],
+          "drawnComboIds": ["b_soy_youtiao"],
+          "selectedCandidateId": "draw:2026-10-26:breakfast:0",
+          "calories": 390,
+          "budget": { "baseUsed": 1, "adUsed": 0, "checkedIn": true }
+        },
+        "lunch": {
+          "candidateCombos": [],
+          "selectedCandidateId": null,
+          "calories": null,
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false },
+          "drawnComboIds": []
+        },
+        "dinner": {
+          "candidateCombos": [],
+          "selectedCandidateId": null,
+          "calories": null,
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false },
+          "drawnComboIds": []
+        }
+      }
+    }
+  },
+  "stamps": {
+    "soy_milk": {
+      "checkInCount": 3,
+      "firstCheckInDate": "2026-10-25",
+      "checkInDates": ["2026-10-25", "2026-10-25", "2026-10-26"],
+      "unknownStampField": "keep-stamp"
+    },
+    "beef_veg_rice": {
+      "checkInCount": 8,
+      "firstCheckInDate": "2026-10-20",
+      "checkInDates": [
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23",
+        "2026-10-24",
+        "2026-10-25"
+      ]
+    },
+    "white_rice": {
+      "checkInCount": 0,
+      "firstCheckInDate": "",
+      "checkInDates": []
+    },
+    "custom_dish:test-v5": {
+      "checkInCount": 1,
+      "firstCheckInDate": "2026-10-27",
+      "checkInDates": ["2026-10-27"]
+    }
+  },
+  "customIngredients": [
+    {
+      "id": "custom_ingredient:test-v5",
+      "name": "测试食材",
+      "kcalPer100g": 100
+    }
+  ],
+  "customDishes": [
+    {
+      "id": "custom_dish:test-v5",
+      "name": "测试自制菜",
+      "imageId": null,
+      "emoji": "🍅",
+      "category": "main",
+      "meals": ["lunch"],
+      "rarity": "R",
+      "ingredientRows": [],
+      "calorieMode": "total",
+      "calories": 300,
+      "cooking": null,
+      "includeInPool": true,
+      "archived": false,
+      "createdAt": "2026-10-26"
+    }
+  ],
+  "settings": {
+    "showCalories": true,
+    "profileHintDismissed": true,
+    "theme": "cute",
+    "unknownSettingField": "keep-setting"
+  }
+}
