@@ -1,7 +1,10 @@
 import { useEffect, useLayoutEffect } from 'react'
 
+import { SYNC } from '@/config/gameConfig'
 import { useAppStore } from '@/store/useAppStore'
 import { useUiStore } from '@/store/useUiStore'
+import { startSyncRuntime } from '@/sync/runtime'
+import { syncEngine } from '@/sync/service'
 
 import { detectClockChange, readClockSnapshot } from './clock'
 import type { ClockChange } from './clock'
@@ -42,6 +45,17 @@ export default function App() {
   useEffect(() => {
     void hydrate()
   }, [hydrate])
+
+  // 引擎自己判断是否开启了同步；未开启时这里只是一次空转。
+  useEffect(
+    () =>
+      startSyncRuntime({
+        engine: syncEngine,
+        store: useAppStore,
+        debounceMs: SYNC.autoSyncDebounceMs,
+      }),
+    [],
+  )
 
   // 首屏内联脚本已应用一次；这里覆盖 import / 恢复快照 / 清空数据带来的变化。
   useLayoutEffect(() => {

@@ -7,6 +7,8 @@ export type SnapshotReason =
   | 'before-restore'
   | 'before-clear-profile'
   | 'before-recovery'
+  | 'before-cloud-merge'
+  | 'before-cloud-restore'
 
 /** 列表只读元数据，避免为了显示时间/大小去加载全部图片字节。 */
 export interface SnapshotMeta {

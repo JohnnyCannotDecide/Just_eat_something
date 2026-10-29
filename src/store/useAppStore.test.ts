@@ -2092,3 +2092,43 @@ describe('custom dish actions', () => {
     expect(images.images.has(dish.imageId!)).toBe(true)
   })
 })
+
+describe('destructive sync notifications', () => {
+  it('清空数据在落盘前通知同步引擎', async () => {
+    const { store } = setup()
+    await store.getState().hydrate()
+
+    const kinds: string[] = []
+    const { onDestructive } = await import('@/sync/destructive')
+    const off = onDestructive((kind) => kinds.push(kind))
+
+    try {
+      await store.getState().clearData()
+    } finally {
+      off()
+    }
+
+    expect(kinds).toEqual(['clear'])
+  })
+
+  it('导入备份时通知 import', async () => {
+    const { store } = setup()
+    await store.getState().hydrate()
+    const exported = await store.getState().exportBackup()
+    if (exported.status !== 'ok') {
+      throw new Error(exported.message)
+    }
+
+    const kinds: string[] = []
+    const { onDestructive } = await import('@/sync/destructive')
+    const off = onDestructive((kind) => kinds.push(kind))
+
+    try {
+      await store.getState().importJson(exported.json)
+    } finally {
+      off()
+    }
+
+    expect(kinds).toEqual(['import'])
+  })
+})

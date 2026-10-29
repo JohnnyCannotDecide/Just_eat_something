@@ -7,6 +7,8 @@ export const SNAPSHOT_REASON_LABELS: Record<SnapshotReason, string> = {
   'before-restore': '恢复前',
   'before-clear-profile': '清除档案前',
   'before-recovery': '恢复模式重置前',
+  'before-cloud-merge': '云同步合并前',
+  'before-cloud-restore': '云端覆盖本机前',
 }
 
 export function formatSnapshotReason(reason: SnapshotReason): string {

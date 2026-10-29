@@ -8,6 +8,14 @@ export const PROD_STORAGE_PREFIX = 'diet-diary:'
 export const DEV_STORAGE_PREFIX = 'dev_diet-diary:'
 export const TEST_STORAGE_PREFIX = 'test_diet-diary:'
 
+/**
+ * 云同步 sidecar 使用独立前缀：同步码与同步游标绝不进入 app-data、
+ * 备份导出或快照。命名空间规则与主数据一致。
+ */
+export const PROD_SYNC_PREFIX = 'diet-diary-sync:'
+export const DEV_SYNC_PREFIX = 'dev_diet-diary-sync:'
+export const TEST_SYNC_PREFIX = 'test_diet-diary-sync:'
+
 export const PROD_IMAGE_DB_NAME = 'diet-diary'
 export const DEV_IMAGE_DB_NAME = 'dev_diet-diary-images'
 export const TEST_IMAGE_DB_NAME = 'test_diet-diary-images'
@@ -20,6 +28,12 @@ const STORAGE_PREFIXES: Record<StorageNamespace, string> = {
   prod: PROD_STORAGE_PREFIX,
   dev: DEV_STORAGE_PREFIX,
   test: TEST_STORAGE_PREFIX,
+}
+
+const SYNC_PREFIXES: Record<StorageNamespace, string> = {
+  prod: PROD_SYNC_PREFIX,
+  dev: DEV_SYNC_PREFIX,
+  test: TEST_SYNC_PREFIX,
 }
 
 const IMAGE_DB_NAMES: Record<StorageNamespace, string> = {
@@ -36,6 +50,12 @@ const SNAPSHOT_DB_NAMES: Record<StorageNamespace, string> = {
 
 export function storagePrefix(namespace: StorageNamespace = 'prod'): string {
   return STORAGE_PREFIXES[namespace]
+}
+
+export function syncStoragePrefix(
+  namespace: StorageNamespace = 'prod',
+): string {
+  return SYNC_PREFIXES[namespace]
 }
 
 export function imageDbName(namespace: StorageNamespace = 'prod'): string {

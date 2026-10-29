@@ -94,6 +94,7 @@ import {
   parseBackupJson,
   serializeBackup,
 } from '@/storage/backup'
+import { noteDestructive } from '@/sync/destructive'
 
 export type AppStoreStatus =
   | 'idle'
@@ -291,6 +292,11 @@ export interface AppStore {
   hydrate: () => Promise<void>
   refreshForToday: () => Promise<void>
   updateData: (updater: (data: AppData) => AppData) => Promise<void>
+  /**
+   * 写入同步引擎拉下来的数据。不触发破坏性事件；快照由引擎在
+   * 覆盖前自行完成，落盘仍走这里的串行队列。
+   */
+  applySyncedData: (data: AppData) => Promise<void>
   updateProfile: (profile: BodyProfile | null) => Promise<void>
   clearProfile: () => Promise<ClearProfileResult>
   setShowCalories: (enabled: boolean) => Promise<void>
@@ -1303,6 +1309,14 @@ export function createAppStore(
       updateData: async (updater) => {
         try {
           await commit((data) => updater(data))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      applySyncedData: async (data) => {
+        try {
+          await attempt(() => ({ next: data, result: undefined }))
         } catch (error) {
           fail(error)
         }
@@ -2328,6 +2342,10 @@ export function createAppStore(
                 }
               }
 
+              // 数据即将被整体替换：先同步通知引擎，避免把这次变化当成
+              // 普通编辑而向云端上传墓碑。
+              noteDestructive('import')
+
               try {
                 await saveAppData(adapter, parsed.data)
               } catch (error) {
@@ -2374,6 +2392,7 @@ export function createAppStore(
           return await enqueue<ClearDataResult>(() =>
             withDataLock(lockName, async () => {
               await captureCurrent('before-clear')
+              noteDestructive('clear')
 
               const today = clock()
               await clearAppData(adapter, today)
@@ -2428,6 +2447,8 @@ export function createAppStore(
 
               const before = await captureCurrent('before-restore')
               const beforePayload = await snapshots.read(before.id)
+
+              noteDestructive('restore')
 
               try {
                 await imageAdapter.putImages(payload.images)
@@ -2500,6 +2521,7 @@ export function createAppStore(
 
               const today = clock()
               const empty = createEmptyAppData(today)
+              noteDestructive('recovery')
               await saveAppData(adapter, empty)
               set({
                 data: empty,
