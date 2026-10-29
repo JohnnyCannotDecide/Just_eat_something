@@ -3,7 +3,7 @@
 每天三餐抽套餐决定吃什么，再逐个部件重抽、舍弃或手动添加；打卡后把吃掉的菜品收进 94 格印章图鉴（一餐可同时盖多枚），并在日历里留下当天的三餐状态与印章数。移动端优先（按 390px 宽设计），可安装为 PWA，离线也能记录。
 
 - **技术栈**：React 19 + TypeScript（strict）+ Vite 8 + zustand + Vitest，PWA 使用 `vite-plugin-pwa` / Workbox。
-- **数据**：主数据保存在浏览器 `localStorage`，自制菜图片保存在 `IndexedDB`，都只通过 `src/storage` 的端口访问，不存在服务端。
+- **数据**：主数据保存在浏览器 `localStorage`，自制菜图片保存在 `IndexedDB`，都只通过 `src/storage` 的端口访问。应用是本地优先的；可选的云同步把数据备份到你自己的 Cloudflare D1（Pages Functions），不开也能正常使用，见第 8 节与 [DEPLOY.md](DEPLOY.md)。
 - **规则**：概率、保底、次数、印章阈值等数值只有一处来源 —— `src/config/gameConfig.ts`。
 
 ---
@@ -21,6 +21,9 @@ npm run build      # 类型检查 + 生产构建到 dist/
 npm run preview    # 预览生产构建
 npm run icons      # 重新生成 PWA 图标（源文件 public/favicon.svg）
 npm run seed:demo  # 生成可导入的演示存档（仅开发用，见第 11 节）
+npm run db:migrate:local  # 给本地 D1 建表（云同步接口开发用）
+npm run dev:pages         # wrangler pages dev，本地 Functions + 本地 D1
+npm run test:api          # 云同步接口测试（本地启动，绝不连线上库）
 ```
 
 > 开发模式下 Service Worker 关闭（`devOptions.enabled = false`）。
@@ -51,7 +54,7 @@ npm run seed:demo  # 生成可导入的演示存档（仅开发用，见第 11 �
   - 右上角「＋」新建自制菜谱；自制卡可进入详情后编辑或删除。
   - 未收集的官方菜名称统一显示为 `???`，只展示灰色剪影、稀有度色环和类别图标；详情页只显示「吃一次就解锁」。真实名称、图片、食材、做法、热量和 tip 都不会进入视图，卡片 aria-label 也只写「未收集的菜品」。
   - 自制菜（含未收集、归档）不受影响，始终显示真实名称与图片；已归档的自制菜保留在图鉴和历史里，只退出抽卡。
-- **设置**：个人档案、外观主题、热量显示开关、含图片的备份导入导出、清空数据。
+- **设置**：个人档案、外观主题、热量显示开关、含图片的备份导入导出、本地快照、可选的云同步、清空数据。
 
 ### 2.1 主题与设计令牌
 
@@ -254,11 +257,40 @@ npm run seed:demo  # 生成可导入的演示存档（仅开发用，见第 11 �
 
 ---
 
-## 8. 接入云同步
+## 8. 云同步（可选）
 
-1. 实现 `src/storage/CloudSyncAdapter.ts` 的九个方法：JSON 端口 `get` / `set` / `remove` / `exportAll`，图片端口 `getImage` / `putImage` / `deleteImage` / `clearImages`，保持与本地适配器相同的语义（读取失败返回 `null`，写失败抛错）。当前占位实现会全部抛错，不会静默丢图。
-2. 在 `src/storage/index.ts` 决定使用哪个适配器（例如按登录状态切换 `storage` 单例）。业务代码已经全部依赖 `storage`，不需要改动。
-3. 以下内容属于后续工作，当前未实现：离线缓存、冲突合并策略、schema 迁移、多设备同步队列。store 内的写操作已经串行化（`enqueue`），接入时可复用它保证单写。
+数据默认只在本地。设置页的「云同步」可以把记录备份到**你自己的** Cloudflare D1，并在多台设备之间合并；不开启时应用行为完全不变。部署步骤与手动命令清单见 [DEPLOY.md](DEPLOY.md)。
+
+### 结构
+
+- **服务端**：Cloudflare Pages Functions（`functions/api/sync/*`、`functions/api/images/*`）+ D1（`migrations/0001_init.sql` 的 `users` / `records` / `images` / `snapshots` / `snapshot_images`）。静态站仍是 `dist/`，函数与页面同源。Pages / Functions / D1 免费套餐不需要绑定支付方式。
+- **共享常量**：请求体上限、单批条数、图片体积、限流、快照保留数等都在 `src/config/gameConfig.ts` 的 `SYNC` 里，客户端与 Functions 共用。
+- **鉴权**：同步码由本机生成（160 位 → 32 位 Crockford Base32，按 4 位分组显示）。服务器只保存 SHA-256 哈希；轮换后旧哈希保留 10 分钟宽限，避免响应丢失把自己锁在外面。所有鉴权失败统一返回 401，不回显原因；同步码不会进入 AppData、导出备份、快照、日志或错误文案。
+- **同步码只存本机**：放在独立前缀 `diet-diary-sync:` 的 `code` 键；同一前缀的 `state` 键保存 `deviceId`、`baseline`、`pending`、拉取游标、最近同步时间与状态。因此同步元数据**不进入 AppData**，存档仍是 `schemaVersion = 6`，也不需要新的迁移。sidecar 丢失或损坏时只备份原值并要求用户重新确认，绝不猜测后覆盖任何一边。
+
+### 同步规则
+
+- **记录投影**（`src/sync/canonical.ts`）：`meta/profile`（含手动目标热量）、`meta/settings`、`meta/pity`；每天拆成 `days/<dateKey>/breakfast|lunch|dinner` 与 `days/<dateKey>/meta`，两台设备同一天各打卡不同餐时两餐都保留；另有 `customDishes/<id>`、`customIngredients/<id>`、`checkins/<eventId>`。`stamps` 是派生缓存，不同步。
+- **变更观察**（`src/sync/observer.ts`）：订阅 store 的 `data` 引用变化，覆盖打卡、重抽、自制菜、导入、清空、恢复等所有写路径；本地缺失的记录生成墓碑；编辑时间戳是 wall-clock Lamport（`max(now, lastStamp + 1)`），保证「刚拉取再编辑」一定比云端新。
+- **合并**（`src/sync/merge.ts`）：普通记录按 `(updatedAt, deviceId)` 取新；墓碑删除旧记录，本地更晚的编辑可以复活；打卡事件取并集、只增不删，同 id 内容冲突保留云端并记 warning；合并后用事件重建印章。
+- **拉取游标**：records 与 images 两条独立游标，只按完整 rev 块分页，避免同一 rev 被截断后跳过数据。增量拉取没返回的 key **不等于**云端删除。
+- **空本地保护**：本机没有有效数据时只拉取、绝不推送；服务端对 `isEmpty` 的推送同样返回 409 兜底。
+- **首次连接**：本机空、云端有 → 输入码后自动拉取恢复；本机有、云端空 → 确认后上传；两边都有 → 不写任何本地数据，由用户选择「合并」或「以云端为准」，两者都会先创建本地快照。
+- **破坏性操作确认**：清空、导入备份、从快照恢复、恢复模式重置会把同步状态置为 `needs-confirm` 并清空待推送；用户选择「保留云端并恢复」或「用本机覆盖云端」之前不会自动同步。显式清空后云端不会被自动拉回本机。
+- **离线与重试**：`pending` 持久化在 sidecar，断网/失败不会丢改动；回到前台、恢复网络、本地改动约 3 秒后都会自动重试，也可以手动「立即同步」。
+- **图片**：只上传被引用且内容变化的图，客户端压到约 80 KB（服务端上限 256 KB）；只下载本地缺失的图，不覆盖已有本地图，也不传播图片删除。
+- **服务端约束**：集合白名单、请求体 ≤ 2 MB、每用户约 60 次/分钟的基础限流、Origin 校验、rev 原子分配；打卡事件 `INSERT OR IGNORE`；覆盖已有数据前按天复制快照（`INSERT ... SELECT`，保留最近 14 天），快照失败则本次推送失败，不做无快照覆盖。
+
+### 本地验证
+
+```bash
+npm run db:migrate:local   # 本地 D1 建表
+npm run build
+npm run dev:pages          # 8788，Functions + 本地 D1
+npm run test:api           # 鉴权、LWW、墓碑、分页、限流、体积、快照等接口测试
+```
+
+`npm run dev`（5173）里的 `/api` 只在开发时代理到 `127.0.0.1:8788`；生产同源。测试与本地开发都只用本地 D1，不运行任何 `--remote` 命令，也不代表你登录 Cloudflare。
 
 ---
 
@@ -283,7 +315,8 @@ npm run preview -- --host 127.0.0.1 --port 4173
 
 ## 10. 测试与排错
 
-- `npm test`：core 规则、存储、store、选择器与纯函数；另有设计令牌守卫（组件 CSS 不允许原始颜色 / 字体 / 圆角 / 动效字面量）和三套主题的对比度 / 色差检查；不使用 React Testing Library，交互靠手动验收。
+- `npm test`：core 规则、存储、store、选择器、同步引擎 / 合并 / 投影 / 运行时与纯函数；另有设计令牌守卫（组件 CSS 不允许原始颜色 / 字体 / 圆角 / 动效字面量）和三套主题的对比度 / 色差检查；不使用 React Testing Library，交互靠手动验收。
+- `npm run test:api`：在本地启动 `wrangler pages dev` + 本地 D1，覆盖鉴权、轮换、LWW、墓碑、分页、空本地 409、图片往返、413 / 429 / 403、快照去重等接口行为；不会连接线上库。
 - `npm run typecheck`、`npm run build`：类型与构建必须同时通过。
 - 移动端基准：390 × 844 @2x。检查页面无横向溢出、主要按钮 ≥ 44px、底部导航不被 home indicator 遮挡、输入框字号 ≥ 16px（避免 iOS 聚焦缩放）。
 - 构建时若看到图片相关警告，确认没有把空目录写进 `globPatterns`。
@@ -296,7 +329,8 @@ npm run preview -- --host 127.0.0.1 --port 4173
 - 浏览器隐私模式或禁用 IndexedDB 时图片无法保存/读取，自制菜会退回 emoji，已有图片在页面上可能不显示。
 - **schemaVersion 已升到 6**：v5 旧构建读到 v6 存档会按「版本高于应用支持」进入恢复页，不会覆盖数据，但也无法继续使用；升级后请不要回退到旧版本再保存。
 - 广告是本地模拟，未接入真实 SDK。
-- 云同步仅有接口占位（`CloudSyncAdapter` 会明确抛错）。
+- 云同步需要你自己部署 Cloudflare Pages + D1（见 [DEPLOY.md](DEPLOY.md)）；同步码丢失后无法从服务器找回云端数据，请自行保管。云端快照（最近 14 天）目前只保存，没有恢复 UI。跨设备冲突按 `(updatedAt, deviceId)` 解决，依赖设备时钟大致准确；客户端上报的时间会被服务端钳到当前时间 + 5 分钟以内。
+- `src/storage/CloudSyncAdapter.ts` 仍是未使用的占位实现；云同步走的是 `src/sync/` 自己的 HTTP 传输层。
 - 日历只读展示历史，不支持补打卡或修改过去的记录。
 - 成就、分享尚未实现。
 - iOS 上下载 JSON 备份可能打开分享/预览面板，而不是直接保存到“文件”。
