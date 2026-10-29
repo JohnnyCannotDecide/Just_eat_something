@@ -58,6 +58,10 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 把返回的 `database_id` 复制到根目录的 `wrangler.toml`，替换其中的占位值
 `00000000-0000-0000-0000-000000000000`。
 
+- 如果提示数据库已存在，说明之前创建过：运行 `npx wrangler d1 list`，找到
+  `diet-diary-sync` 对应的 UUID 填进去即可，不要重复创建。
+- 填完可以本地确认一眼：`grep database_id wrangler.toml`，不应再出现全 0 的 UUID。
+
 > `database_id` 不是密钥，可以留在本地；是否提交到个人仓库由你决定。
 > 本地开发与测试不依赖它，占位值也能跑。
 
@@ -151,6 +155,8 @@ npm run dev                       # 前端 5173，/api 会代理到 127.0.0.1:87
 
 | 现象 | 原因与处理 |
 | --- | --- |
+| 部署报 `Invalid database UUID (00000000-0000-0000-0000-000000000000)` | `wrangler.toml` 里的 `database_id` 还是占位值。先 `npx wrangler d1 create diet-diary-sync`（已存在则 `npx wrangler d1 list` 查 UUID），替换后重新执行 `npx wrangler pages deploy dist --project-name bento-handbook --branch main`。 |
+| 部署成功但打开页面同步报错 | 线上 D1 还没建表。执行 `npx wrangler d1 migrations apply diet-diary-sync --remote` 后再试。 |
 | 连接时提示「同步码无效」 | 码输错、少字符或已被轮换。检查 32 位是否完整；轮换后需用新码。统一返回 401，不区分具体原因。 |
 | 提示「请求太频繁」 | 基础限流（约 60 次/分钟）。等一分钟再试。 |
 | 提示「图片太大」 | 云同步会把图片压到约 80 KB；仍超限的图会跳过并保留在本地，记录本身继续同步。 |
