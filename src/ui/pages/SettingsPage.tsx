@@ -15,6 +15,7 @@ import { useUiStore } from '@/store/useUiStore'
 import { RestoreSnapshotDialog } from '../components/backup/RestoreSnapshotDialog'
 import { SnapshotList } from '../components/backup/SnapshotList'
 import { ConfirmDialog } from '../components/gameplay/ConfirmDialog'
+import { SyncSection } from '../components/settings/SyncSection'
 import { ThemePicker } from '../components/settings/ThemePicker'
 import { formatKcal, formatKcalWithUnit } from '../formatKcal'
 import {
@@ -527,6 +528,8 @@ export function SettingsPage() {
           />
         </div>
       </section>
+
+      <SyncSection />
 
       <div className="settings-list">
         <button
