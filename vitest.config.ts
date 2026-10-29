@@ -17,5 +17,7 @@ export default defineConfig({
       // 开发工具测试用 .mjs，避免 Node API 进入应用的 tsconfig。
       'scripts/**/*.{test,spec}.mjs',
     ],
+    // API 集成测试要启动本地 wrangler，只在 npm run test:api 时运行。
+    exclude: ['**/node_modules/**', '**/dist/**', 'scripts/**/*.api.test.mjs'],
   },
 })

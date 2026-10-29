@@ -181,6 +181,38 @@ export const CALORIE_SAFETY_FLOOR: Record<Sex, number> = {
   male: 1500,
 }
 
+/**
+ * 云同步的协议限额与节奏。客户端、Pages Functions 共用这一份数值。
+ * 服务端只做基础防护，真正的兜底是 Cloudflare 免费额度。
+ */
+export const SYNC = {
+  /** 单个请求体上限（应用层，低于平台 100 MB）。 */
+  maxRequestBodyBytes: 2 * 1024 * 1024,
+  /** 单条记录 JSON 文本上限。 */
+  maxRecordJsonBytes: 256 * 1024,
+  maxRecordsPerPush: 50,
+  maxImagesPerPush: 10,
+  maxImagesPerGet: 20,
+  /** 已认证用户每分钟请求数。 */
+  authRateLimitPerMinute: 60,
+  /** 注册/轮换按 IP 每分钟请求数。 */
+  registerRateLimitPerMinute: 30,
+  /** 每日快照保留份数。 */
+  snapshotRetention: 14,
+  /** pull 每页最多记录数；按完整 rev 块返回。 */
+  pullPageSize: 200,
+  /** 客户端目标图片体积。 */
+  cloudImageMaxBytes: 80 * 1024,
+  /** 服务端单张图片解码后上限。 */
+  cloudImageServerMaxBytes: 256 * 1024,
+  autoSyncDebounceMs: 3000,
+  retryDelaysMs: [30_000, 60_000, 120_000, 300_000],
+  /** 轮换后旧同步码的宽限时间。 */
+  rotationGraceMs: 10 * 60 * 1000,
+  /** 客户端时间戳最多允许超前服务端的时间。 */
+  maxClockSkewMs: 5 * 60 * 1000,
+} as const
+
 export interface RarityMeta {
   label: Rarity
 }

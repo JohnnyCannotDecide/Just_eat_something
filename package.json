@@ -13,6 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed:demo": "node scripts/seed-demo-data.mjs",
+    "db:migrate:local": "wrangler d1 migrations apply diet-diary-sync --local",
+    "dev:pages": "wrangler pages dev dist --port 8788",
+    "test:api": "vitest run --config vitest.api.config.ts",
     "typecheck": "tsc -b",
     "icons": "pwa-assets-generator -c pwa-assets.config.mjs public/favicon.svg"
   },
@@ -22,6 +25,7 @@
     "zustand": "^5.0.16"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261029.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
@@ -32,6 +36,7 @@
     "typescript": "~6.0.3",
     "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.155.0"
   }
 }

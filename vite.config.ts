@@ -8,7 +8,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig({
   // 固定端口：localStorage 按 origin 隔离，端口漂移会让用户以为数据丢了。
   // 不要设置 host，`localhost` 与 `127.0.0.1` 也是不同 origin。
-  server: { port: 5173, strictPort: true },
+  server: {
+    port: 5173,
+    strictPort: true,
+    // 仅开发：把 /api 转给本地 Pages Functions（先 npm run build + npm run dev:pages）。
+    // 生产部署时前端与 Functions 同源，不需要代理。
+    proxy: { '/api': 'http://127.0.0.1:8788' },
+  },
   preview: { port: 4173, strictPort: true },
   plugins: [
     react(),
