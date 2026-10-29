@@ -7,5 +7,5 @@ compatibility_date = "2025-09-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "diet-diary-sync"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "2b9c11f0-e165-4887-b9a8-a78069aee049"
 migrations_dir = "migrations"
