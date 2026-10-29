@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 3,
+  "profile": {
+    "sex": "female",
+    "age": 30,
+    "heightCm": 165,
+    "weightKg": 60,
+    "activity": "sedentary",
+    "goal": "maintain"
+  },
+  "targetCalories": 1800,
+  "pityCount": 2,
+  "days": {
+    "2026-10-26": {
+      "dateKey": "2026-10-26",
+      "unknownDayField": "keep-day",
+      "tokens": {
+        "dateKey": "2026-10-26",
+        "count": 2,
+        "customRewardClaimed": false
+      },
+      "meals": {
+        "breakfast": {
+          "unknownMealField": "keep-meal",
+          "candidateCombos": [
+            {
+              "id": "draw:2026-10-26:breakfast:0",
+              "comboId": "b_soy_youtiao",
+              "source": "draw",
+              "name": "豆浆油条套餐",
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "comp:combo:soy-milk:1",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "soy_milk",
+                  "name": "豆浆",
+                  "category": "drink",
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": 300,
+                  "calories": 90,
+                  "eaten": true,
+                  "discarded": false
+                },
+                {
+                  "id": "comp:combo:youtiao:1",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "youtiao",
+                  "name": "油条",
+                  "category": "staple",
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": 80,
+                  "calories": 300,
+                  "eaten": true,
+                  "discarded": false
+                }
+              ],
+              "unknownCandidateField": "keep-candidate"
+            },
+            {
+              "id": "draw:2026-10-26:breakfast:1",
+              "comboId": "b_soy_youtiao",
+              "source": "draw",
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "comp:combo:soy-milk:2",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "soy_milk",
+                  "name": "豆浆",
+                  "category": "drink",
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": 300,
+                  "calories": 90,
+                  "eaten": false,
+                  "discarded": false
+                },
+                {
+                  "id": "comp:combo:youtiao:2",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "youtiao",
+                  "name": "油条",
+                  "category": "staple",
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": 80,
+                  "calories": 300,
+                  "eaten": false,
+                  "discarded": false
+                }
+              ]
+            },
+            {
+              "id": "draw:2026-10-26:breakfast:2",
+              "comboId": "gone_combo",
+              "source": "draw",
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "comp:custom:mystery:1",
+                  "kind": "custom",
+                  "origin": "custom",
+                  "dishId": null,
+                  "name": "神秘早餐",
+                  "category": null,
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": null,
+                  "calories": 260,
+                  "eaten": true,
+                  "discarded": false
+                }
+              ]
+            }
+          ],
+          "selectedCandidateId": "draw:2026-10-26:breakfast:0",
+          "calories": 390,
+          "budget": { "checkedIn": true, "baseUsed": 3, "adUsed": 0 }
+        },
+        "lunch": {
+          "candidateCombos": [
+            {
+              "id": "custom:2026-10-26:lunch:1",
+              "comboId": null,
+              "source": "customRecord",
+              "name": "公司聚餐",
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "custom:2026-10-26:lunch:1:component",
+                  "kind": "custom",
+                  "origin": "custom",
+                  "dishId": null,
+                  "name": "公司聚餐",
+                  "category": null,
+                  "rarity": "R",
+                  "ingredients": [],
+                  "grams": null,
+                  "calories": 700,
+                  "eaten": true,
+                  "discarded": false
+                }
+              ]
+            }
+          ],
+          "selectedCandidateId": "custom:2026-10-26:lunch:1",
+          "calories": 700,
+          "budget": { "checkedIn": true, "baseUsed": 0, "adUsed": 0 }
+        },
+        "dinner": {
+          "candidateCombos": [],
+          "selectedCandidateId": null,
+          "calories": null,
+          "budget": { "checkedIn": false, "baseUsed": 0, "adUsed": 0 }
+        }
+      }
+    }
+  },
+  "stamps": {
+    "soy_milk": {
+      "checkInCount": 2,
+      "firstCheckInDate": "2026-10-26",
+      "checkInDates": ["2026-10-26", "2026-10-26"]
+    }
+  },
+  "customIngredients": [],
+  "customDishes": [],
+  "settings": {
+    "showCalories": true,
+    "profileHintDismissed": false,
+    "theme": "cute",
+    "unknownSettingField": "keep-setting"
+  }
+}

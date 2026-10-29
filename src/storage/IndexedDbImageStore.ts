@@ -2,9 +2,11 @@ import type {
   BinaryStorageAdapter,
   ImageMime,
   StoredImage,
+  StoredImageEntry,
 } from './BinaryStorageAdapter'
+import { PROD_IMAGE_DB_NAME } from './namespaces'
 
-export const IMAGE_DB_NAME = 'diet-diary'
+export const IMAGE_DB_NAME = PROD_IMAGE_DB_NAME
 export const IMAGE_STORE_NAME = 'images'
 const DB_VERSION = 1
 
@@ -41,6 +43,22 @@ function toBytes(value: unknown): Uint8Array {
     return new Uint8Array(value)
   }
   return new Uint8Array(0)
+}
+
+function toEntry(value: unknown): StoredImageEntry | null {
+  const record = value as ImageRecord | undefined
+  if (
+    !record ||
+    typeof record.key !== 'string' ||
+    typeof record.mime !== 'string'
+  ) {
+    return null
+  }
+  return {
+    imageId: record.key,
+    mime: record.mime,
+    bytes: toBytes(record.bytes),
+  }
 }
 
 /**
@@ -127,6 +145,13 @@ export class IndexedDbImageStore implements BinaryStorageAdapter {
       try {
         make(transaction.objectStore(IMAGE_STORE_NAME))
       } catch {
+        // 批量写入中途出错时必须显式 abort，否则已排队的 put 仍会提交，
+        // 留下“只写了一半”的图片。
+        try {
+          transaction.abort()
+        } catch {
+          // 事务可能已经结束，忽略。
+        }
         reject(new Error(WRITE_ERROR))
         return
       }
@@ -158,6 +183,38 @@ export class IndexedDbImageStore implements BinaryStorageAdapter {
         updatedAt: Date.now(),
       }
       store.put(record)
+    })
+  }
+
+  async listImages(): Promise<StoredImageEntry[]> {
+    return this.read(
+      (store) => store.getAll(),
+      (value) => {
+        if (!Array.isArray(value)) {
+          return []
+        }
+        return value
+          .map(toEntry)
+          .filter((entry): entry is StoredImageEntry => entry !== null)
+      },
+    )
+  }
+
+  async putImages(entries: readonly StoredImageEntry[]): Promise<void> {
+    if (entries.length === 0) {
+      return
+    }
+    await this.write((store) => {
+      const updatedAt = Date.now()
+      for (const entry of entries) {
+        const record: ImageRecord = {
+          key: entry.imageId,
+          mime: entry.mime,
+          bytes: toBytes(entry.bytes),
+          updatedAt,
+        }
+        store.put(record)
+      }
     })
   }
 

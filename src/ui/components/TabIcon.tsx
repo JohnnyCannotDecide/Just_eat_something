@@ -51,24 +51,9 @@ export function TabIcon({ name }: TabIconProps) {
       {name === 'settings' && (
         <>
           <path d="M4.4 7.5h15.2M4.4 12h15.2M4.4 16.5h15.2" />
-          <circle
-            cx="9"
-            cy="7.5"
-            r="2.1"
-            fill="var(--tab-icon-bg, #FFFCF6)"
-          />
-          <circle
-            cx="15.2"
-            cy="12"
-            r="2.1"
-            fill="var(--tab-icon-bg, #FFFCF6)"
-          />
-          <circle
-            cx="8.2"
-            cy="16.5"
-            r="2.1"
-            fill="var(--tab-icon-bg, #FFFCF6)"
-          />
+          <circle cx="9" cy="7.5" r="2.1" className="tab-icon__cutout" />
+          <circle cx="15.2" cy="12" r="2.1" className="tab-icon__cutout" />
+          <circle cx="8.2" cy="16.5" r="2.1" className="tab-icon__cutout" />
         </>
       )}
     </svg>

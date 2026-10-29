@@ -1,4 +1,8 @@
-import { DRAW_LIMITS, DRAW_SOURCE_ORDER } from '@/config/gameConfig'
+import {
+  DRAW_LIMITS,
+  DRAW_SOURCE_ORDER,
+  adExtraDrawsPerMeal,
+} from '@/config/gameConfig'
 
 export type DrawSource = (typeof DRAW_SOURCE_ORDER)[number]
 
@@ -14,8 +18,10 @@ export interface DrawAllowance {
   nextSource: DrawSource | null
   remainingBase: number
   remainingTokens: number
-  remainingAds: number
-  totalRemaining: number
+  /** null 表示广告次数不限。 */
+  remainingAds: number | null
+  /** null 表示广告次数不限，总剩余无法用有限数字表示。 */
+  totalRemaining: number | null
 }
 
 export interface ConsumeDrawResult {
@@ -55,16 +61,19 @@ export function getDrawAllowance(
     0,
     DRAW_LIMITS.basePerMeal - normalizeCount(budget.baseUsed),
   )
-  const remainingAds = Math.max(
-    0,
-    DRAW_LIMITS.adBonusPerMeal - normalizeCount(budget.adUsed),
-  )
+  const remainingAds =
+    adExtraDrawsPerMeal === null
+      ? null
+      : Math.max(
+          0,
+          adExtraDrawsPerMeal - normalizeCount(budget.adUsed),
+        )
   const remainingTokens = normalizeCount(tokenCount)
 
   const remainingBySource: Record<DrawSource, number> = {
     base: remainingBase,
     token: remainingTokens,
-    ad: remainingAds,
+    ad: remainingAds ?? Number.POSITIVE_INFINITY,
   }
   const nextSource =
     DRAW_SOURCE_ORDER.find((source) => remainingBySource[source] > 0) ?? null
@@ -75,7 +84,10 @@ export function getDrawAllowance(
     remainingBase,
     remainingTokens,
     remainingAds,
-    totalRemaining: remainingBase + remainingTokens + remainingAds,
+    totalRemaining:
+      remainingAds === null
+        ? null
+        : remainingBase + remainingTokens + remainingAds,
   }
 }
 
@@ -88,7 +100,9 @@ export function consumeDraw(
 
   if (!source) {
     throw new Error(
-      budget.checkedIn ? '本餐已打卡，不能继续抽卡' : '没有可用的抽卡次数',
+      budget.checkedIn
+        ? '本餐已打卡，不能继续抽卡'
+        : '抽卡配置里没有可用的来源',
     )
   }
 

@@ -33,6 +33,8 @@ interface RawDish {
   rarity: string
   category: string
   meals: readonly string[]
+  providesStaple?: boolean
+  providesProtein?: boolean
   ingredients: readonly DishIngredient[]
   image: string
   stampImage?: string
@@ -96,6 +98,12 @@ function parseDish(raw: RawDish): Dish {
     rarity: parseRarity(raw.rarity),
     category: parseDishCategory(raw.category, context),
     meals: parseMeals(raw.meals, context),
+    ...(raw.providesStaple !== undefined
+      ? { providesStaple: raw.providesStaple }
+      : {}),
+    ...(raw.providesProtein !== undefined
+      ? { providesProtein: raw.providesProtein }
+      : {}),
     ingredients: raw.ingredients.map(({ ingredientId, grams }) => ({
       ingredientId,
       grams,

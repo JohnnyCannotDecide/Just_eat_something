@@ -1,6 +1,7 @@
 import type {
   BinaryStorageAdapter,
   StoredImage,
+  StoredImageEntry,
 } from './BinaryStorageAdapter'
 import type { StorageAdapter } from './StorageAdapter'
 
@@ -21,6 +22,14 @@ export class CloudSyncAdapter
     throw new Error(NOT_IMPLEMENTED)
   }
 
+  async getRaw(_key: string): Promise<string | null> {
+    throw new Error(NOT_IMPLEMENTED)
+  }
+
+  async setRaw(_key: string, _raw: string): Promise<void> {
+    throw new Error(NOT_IMPLEMENTED)
+  }
+
   async remove(_key: string): Promise<void> {
     throw new Error(NOT_IMPLEMENTED)
   }
@@ -34,6 +43,14 @@ export class CloudSyncAdapter
   }
 
   async putImage(_key: string, _image: StoredImage): Promise<void> {
+    throw new Error(NOT_IMPLEMENTED)
+  }
+
+  async listImages(): Promise<StoredImageEntry[]> {
+    throw new Error(NOT_IMPLEMENTED)
+  }
+
+  async putImages(_entries: readonly StoredImageEntry[]): Promise<void> {
     throw new Error(NOT_IMPLEMENTED)
   }
 

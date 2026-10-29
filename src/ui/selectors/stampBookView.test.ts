@@ -31,13 +31,15 @@ describe('buildStampBookView', () => {
   it('lists every canonical dish as uncollected on an empty book', () => {
     const view = buildStampBookView({})
 
-    expect(view.total).toBe(60)
-    expect(view.entries).toHaveLength(60)
+    expect(view.total).toBe(94)
+    expect(view.entries).toHaveLength(94)
     expect(view.collected).toBe(0)
     expect(view.percent).toBe(0)
 
     for (const entry of view.entries) {
       expect(entry.collected).toBe(false)
+      expect(entry.masked).toBe(true)
+      expect(entry.name).toBe('???')
       expect(entry.count).toBe(0)
       expect(entry.tier).toBeNull()
       expect(entry.tierLabel).toBeNull()
@@ -47,6 +49,30 @@ describe('buildStampBookView', () => {
       expect(entry.firstCheckInLabel).toBe('')
       expect(entry.dateLabel).toBe('')
     }
+  })
+
+  it('strips every leaky field from uncollected official dishes', () => {
+    const view = buildStampBookView({})
+    const rice = entryOf(view, 'white_rice')
+
+    expect(rice.masked).toBe(true)
+    expect(rice.name).toBe('???')
+    expect(rice.emoji).toBe('')
+    expect(rice.image).toBe('')
+    expect(rice.imageId).toBeUndefined()
+    expect(rice.stampImage).toBeUndefined()
+    expect(rice.kcal).toBeNull()
+    expect(rice.tip).toBeUndefined()
+    expect(rice.ingredients).toEqual([])
+    expect(rice.cooking).toBeNull()
+    // 类别与稀有度用于剪影上的色环和类别图标，不属于剧透。
+    expect(rice.rarity).toBe('R')
+    expect(rice.category).toBe('staple')
+
+    const serialized = JSON.stringify(view)
+    expect(serialized).not.toContain('白米饭')
+    expect(serialized).not.toContain('朴素但可靠的碳水老朋友')
+    expect(serialized).not.toContain('米饭')
   })
 
   it.each([
@@ -62,13 +88,15 @@ describe('buildStampBookView', () => {
       const entry = entryOf(view, 'white_rice')
 
       expect(entry.collected).toBe(true)
+      expect(entry.masked).toBe(false)
+      expect(entry.name).toBe('白米饭')
       expect(entry.count).toBe(count)
       expect(entry.tier).toBe(tier)
       expect(entry.tierLabel).toBe(tierLabel)
       expect(entry.nextTier).toBe(nextTier)
       expect(entry.remainingToNext).toBe(remainingToNext)
       expect(view.collected).toBe(1)
-      expect(view.percent).toBe(2)
+      expect(view.percent).toBe(1)
     },
   )
 
@@ -82,7 +110,7 @@ describe('buildStampBookView', () => {
 
     expect(view.entries.map((entry) => entry.id)).not.toContain('not-a-dish')
     expect(view.collected).toBe(1)
-    expect(view.percent).toBe(2)
+    expect(view.percent).toBe(1)
   })
 
   it('treats zero or malformed counts as uncollected', () => {
@@ -134,8 +162,12 @@ describe('buildStampBookView', () => {
   })
 
   it('derives calories, ingredients, emoji, and stamp image from the dish', () => {
-    const view = buildStampBookView({})
+    const view = buildStampBookView({
+      stamps: { white_rice: makeRecord(1) },
+    })
     const rice = entryOf(view, 'white_rice')
+
+    expect(rice.masked).toBe(false)
 
     expect(rice.name).toBe('白米饭')
     expect(rice.rarity).toBe('R')
@@ -173,6 +205,7 @@ describe('buildStampBookView', () => {
     )
 
     expect(withStamp.total).toBe(1)
+    expect(withStamp.entries[0]!.masked).toBe(false)
     expect(withStamp.entries[0]!.stampImage).toBe(
       '/images/stamps/white_rice.png',
     )
@@ -188,8 +221,8 @@ describe('buildStampBookView', () => {
     })
 
     expect(view.collected).toBe(3)
-    expect(view.total).toBe(60)
-    expect(view.percent).toBe(5)
+    expect(view.total).toBe(94)
+    expect(view.percent).toBe(3)
   })
 })
 
@@ -222,9 +255,9 @@ describe('buildStampBookView · custom dishes and filters', () => {
       customDishes: [customDish()],
     })
 
-    expect(view.total).toBe(60)
+    expect(view.total).toBe(94)
     expect(view.customTotal).toBe(1)
-    expect(view.entries).toHaveLength(61)
+    expect(view.entries).toHaveLength(95)
     expect(view.entries.at(-1)!.id).toBe('custom_dish:a')
   })
 
@@ -239,6 +272,7 @@ describe('buildStampBookView · custom dishes and filters', () => {
     expect(entry.image).toBe('')
     expect(entry.imageId).toBe('img:a')
     expect(entry.isCustom).toBe(true)
+    expect(entry.masked).toBe(false)
     expect(entry.archived).toBe(false)
     expect(entry.kcal).toBe(Math.round(40 + 72))
     expect(entry.cooking).toBeNull()
@@ -271,8 +305,8 @@ describe('buildStampBookView · custom dishes and filters', () => {
     })
 
     expect(view.collected).toBe(1)
-    expect(view.total).toBe(60)
-    expect(view.percent).toBe(2)
+    expect(view.total).toBe(94)
+    expect(view.percent).toBe(1)
     expect(view.customTotal).toBe(2)
     expect(view.customCollected).toBe(1)
     expect(entryOf(view, 'custom_dish:b').archived).toBe(true)
@@ -294,6 +328,96 @@ describe('buildStampBookView · custom dishes and filters', () => {
     expect(view.entries[0]!.isCustom).toBe(false)
   })
 
+  it('never masks custom dishes, even when uncollected and archived', () => {
+    const entry = entryOf(
+      buildStampBookView({
+        customDishes: [
+          customDish(),
+          customDish({ id: 'custom_dish:b', archived: true }),
+        ],
+      }),
+      'custom_dish:b',
+    )
+
+    expect(entry.masked).toBe(false)
+    expect(entry.name).toBe('番茄炒蛋')
+    expect(entry.archived).toBe(true)
+    expect(entry.kcal).not.toBeNull()
+    expect(entry.ingredients.length).toBeGreaterThan(0)
+  })
+
+  it('searches only collected official dishes and custom dishes', () => {
+    const input = {
+      stamps: { white_rice: makeRecord(1) },
+      customDishes: [
+        customDish(),
+        customDish({
+          id: 'custom_dish:b',
+          name: '旧菜',
+          archived: true,
+        }),
+      ],
+    }
+
+    // 已收集官方菜可以搜到。
+    expect(
+      buildStampBookView(input, 'all', undefined, '白米').entries.map(
+        (entry) => entry.id,
+      ),
+    ).toEqual(['white_rice'])
+
+    // 未收集官方菜即使输入真实菜名也搜不到。
+    expect(
+      buildStampBookView(input, 'all', undefined, '番茄炒蛋').entries.map(
+        (entry) => entry.id,
+      ),
+    ).toEqual(['custom_dish:a'])
+    expect(
+      buildStampBookView(input, 'all', undefined, '番茄').entries.map(
+        (entry) => entry.id,
+      ),
+    ).toEqual(['custom_dish:a'])
+
+    // 未收集官方菜的真实名称不再存在于视图中。
+    expect(
+      buildStampBookView(input, 'all', undefined, '土豆').entries,
+    ).toEqual([])
+    expect(
+      buildStampBookView(input, 'all', undefined, '???').entries,
+    ).toEqual([])
+
+    // 归档自制菜仍然可搜。
+    expect(
+      buildStampBookView(input, 'all', undefined, '旧菜').entries.map(
+        (entry) => entry.id,
+      ),
+    ).toEqual(['custom_dish:b'])
+
+    // 空查询不改列表。
+    expect(buildStampBookView(input, 'all', undefined, '').entries).toHaveLength(
+      96,
+    )
+
+    // 搜索不影响进度总数。
+    const searched = buildStampBookView(input, 'all', undefined, '白米')
+    expect(searched.collected).toBe(1)
+    expect(searched.total).toBe(94)
+  })
+
+  it('combines the filter with the search query', () => {
+    const view = buildStampBookView(
+      {
+        stamps: { white_rice: makeRecord(1) },
+        customDishes: [customDish()],
+      },
+      'collected',
+      undefined,
+      '番茄',
+    )
+
+    expect(view.entries).toEqual([])
+  })
+
   it('filters to custom dishes, including archived ones', () => {
     const view = buildStampBookView(
       {
@@ -309,6 +433,6 @@ describe('buildStampBookView · custom dishes and filters', () => {
       'custom_dish:a',
       'custom_dish:b',
     ])
-    expect(view.total).toBe(60)
+    expect(view.total).toBe(94)
   })
 })

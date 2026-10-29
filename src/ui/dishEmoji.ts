@@ -1,8 +1,21 @@
+import type { DishCategory } from '@/core/types'
+
 /**
  * 菜品图的临时占位。数据层没有 emoji 字段，真实图片就绪后
  * 只需要替换 UI 里的菜品图组件，不影响 dishes.json。
  */
 export const DISH_EMOJI_FALLBACK = '🍽️'
+
+/** 类别图标：自制菜默认图与图鉴未收集卡的类别徽章共用。 */
+export const DISH_CATEGORY_EMOJI: Record<DishCategory, string> = {
+  staple: '🍚',
+  main: '🍲',
+  soup: '🥣',
+  drink: '🥛',
+  veg: '🥬',
+  fruit: '🍎',
+  snack: '🍪',
+}
 
 const DISH_EMOJI: Readonly<Record<string, string>> = {
   white_rice: '🍚',
@@ -65,6 +78,40 @@ const DISH_EMOJI: Readonly<Record<string, string>> = {
   garlic_greens: '🥬',
   winter_melon_ribs_soup: '🍲',
   tomato_egg_soup: '🍅',
+  zucchini_egg: '🍳',
+  wuzhimaotao_chicken_soup: '🍲',
+  loofah_beef_ball: '🥒',
+  eggplant_pot: '🍆',
+  braised_winter_melon: '🥣',
+  cola_chicken_wings: '🍗',
+  corn_rib_soup: '🌽',
+  wood_ear_egg: '🍄',
+  tomato_brisket: '🍅',
+  button_mushroom_wings: '🍄',
+  braised_pork_trotter: '🍖',
+  sweet_sour_ribs: '🍖',
+  corn_shrimp_cake: '🍤',
+  yu_xiang_pork: '🥩',
+  oyster_lettuce: '🥬',
+  rice_roll: '🍥',
+  salt_pepper_wings: '🍗',
+  scallion_braised_chicken: '🍗',
+  spicy_fish_slices: '🐟',
+  cake: '🍰',
+  char_siu_bun: '🥟',
+  taro_milk: '🥤',
+  garlic_ribs: '🍖',
+  spicy_chicken_burger: '🍔',
+  orleans_chicken_burger: '🍔',
+  egg_tart: '🥧',
+  big_meat_bun: '🥟',
+  tofu_seafood_soup: '🍲',
+  steamed_pork_rice_flour: '🍖',
+  celery_beef: '🥩',
+  chili_pork: '🌶️',
+  loofah_soup: '🥣',
+  snow_pea: '🥬',
+  mushroom_pork: '🍄',
 }
 
 export function getDishEmoji(dishId: string): string {

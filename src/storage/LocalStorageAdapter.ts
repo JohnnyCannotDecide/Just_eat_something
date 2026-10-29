@@ -1,6 +1,7 @@
+import { PROD_STORAGE_PREFIX } from './namespaces'
 import type { StorageAdapter } from './StorageAdapter'
 
-export const DEFAULT_KEY_PREFIX = 'diet-diary:'
+export const DEFAULT_KEY_PREFIX = PROD_STORAGE_PREFIX
 
 export class LocalStorageAdapter implements StorageAdapter {
   private readonly prefix: string
@@ -14,19 +15,27 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async get<T>(key: string): Promise<T | null> {
-    const raw = localStorage.getItem(this.storageKey(key))
+    const raw = await this.getRaw(key)
     if (raw === null) return null
 
     try {
       return JSON.parse(raw) as T
     } catch {
-      // 坏数据不应该让页面崩掉，交给上层重新初始化。
+      // 兼容旧调用：坏数据不崩页面；需要区分损坏时用 getRaw。
       return null
     }
   }
 
   async set<T>(key: string, value: T): Promise<void> {
-    localStorage.setItem(this.storageKey(key), JSON.stringify(value))
+    await this.setRaw(key, JSON.stringify(value))
+  }
+
+  async getRaw(key: string): Promise<string | null> {
+    return localStorage.getItem(this.storageKey(key))
+  }
+
+  async setRaw(key: string, raw: string): Promise<void> {
+    localStorage.setItem(this.storageKey(key), raw)
   }
 
   async remove(key: string): Promise<void> {

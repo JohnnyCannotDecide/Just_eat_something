@@ -1,5 +1,5 @@
 {
-  "_comment": "数值为近似值，需人工校对。参考《中国食物成分表》的典型值（kcal/100g）。",
+  "_comment": "数值为近似值，需人工校对。参考《中国食物成分表》的典型值（kcal/100g）。新增复合食材、干制品与半成品（五指毛桃、牛筋丸、叉烧、汉堡胚、蛋挞皮等）同样为近似值。",
   "ingredients": [
     { "id": "rice", "name": "大米", "kcalPer100g": 346 },
     { "id": "cooked_rice", "name": "米饭", "kcalPer100g": 116 },
@@ -66,6 +66,26 @@
     { "id": "peanut", "name": "花生", "kcalPer100g": 567 },
     { "id": "sea_bass", "name": "鲈鱼", "kcalPer100g": 105 },
     { "id": "winter_melon", "name": "冬瓜", "kcalPer100g": 12 },
-    { "id": "pork_ribs", "name": "猪排骨", "kcalPer100g": 278 }
+    { "id": "pork_ribs", "name": "猪排骨", "kcalPer100g": 278 },
+    { "id": "zucchini", "name": "西葫芦", "kcalPer100g": 19 },
+    { "id": "wuzhimaotao", "name": "五指毛桃（干）", "kcalPer100g": 250 },
+    { "id": "loofah", "name": "丝瓜（水瓜）", "kcalPer100g": 20 },
+    { "id": "beef_tendon_ball", "name": "牛筋丸", "kcalPer100g": 250 },
+    { "id": "eggplant", "name": "茄子", "kcalPer100g": 23 },
+    { "id": "chicken_wing", "name": "鸡翅", "kcalPer100g": 202 },
+    { "id": "wood_ear", "name": "木耳（泡发）", "kcalPer100g": 21 },
+    { "id": "celery", "name": "芹菜", "kcalPer100g": 14 },
+    { "id": "button_mushroom", "name": "口蘑", "kcalPer100g": 22 },
+    { "id": "pork_trotter", "name": "猪蹄", "kcalPer100g": 260 },
+    { "id": "scallion", "name": "小葱", "kcalPer100g": 30 },
+    { "id": "garlic", "name": "大蒜", "kcalPer100g": 128 },
+    { "id": "rice_flour", "name": "粘米粉", "kcalPer100g": 366 },
+    { "id": "char_siu", "name": "叉烧", "kcalPer100g": 280 },
+    { "id": "burger_bun", "name": "汉堡胚", "kcalPer100g": 280 },
+    { "id": "egg_tart_shell", "name": "蛋挞皮", "kcalPer100g": 400 },
+    { "id": "pork_belly", "name": "五花肉", "kcalPer100g": 395 },
+    { "id": "chili_pepper", "name": "青辣椒", "kcalPer100g": 22 },
+    { "id": "snow_pea", "name": "荷兰豆", "kcalPer100g": 30 },
+    { "id": "oyster_sauce", "name": "蚝油", "kcalPer100g": 110 }
   ]
 }

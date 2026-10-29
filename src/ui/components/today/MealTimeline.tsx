@@ -12,6 +12,7 @@ interface MealTimelineProps {
   showCalories: boolean
   onDraw: (meal: MealType) => void
   onSelectCombo: (meal: MealType, candidateId: string) => void
+  onRenameCombo: (meal: MealType, candidateId: string) => void
   onCheckIn: (meal: MealType) => void
   onCustom: (meal: MealType) => void
   onRedraw: (meal: MealType, candidateId: string, componentId: string) => void
@@ -32,6 +33,7 @@ export function MealTimeline({
   showCalories,
   onDraw,
   onSelectCombo,
+  onRenameCombo,
   onCheckIn,
   onCustom,
   onRedraw,
@@ -51,6 +53,7 @@ export function MealTimeline({
           showCalories={showCalories}
           onDraw={onDraw}
           onSelectCombo={onSelectCombo}
+          onRenameCombo={onRenameCombo}
           onCheckIn={onCheckIn}
           onCustom={onCustom}
           onRedraw={onRedraw}

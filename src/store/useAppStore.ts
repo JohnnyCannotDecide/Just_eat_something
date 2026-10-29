@@ -1,10 +1,14 @@
 import { create } from 'zustand'
 
-import { customDishAllowedRarities } from '@/config/gameConfig'
+import {
+  customDishAllowedRarities,
+} from '@/config/gameConfig'
+import type { ThemeName } from '@/config/gameConfig'
 import { toDateKey } from '@/core/dateKey'
 import {
   addCustomComponent,
   addDishComponent,
+  createCandidateInstanceId,
   createComboCandidate,
   createCustomOnlyCandidate,
   discardComponent,
@@ -14,6 +18,11 @@ import {
   withComponentIngredientGrams,
   withCustomComponentCalories,
 } from '@/core/components'
+import {
+  refreshComboName,
+  withAutoComboName,
+  withManualComboName,
+} from '@/core/comboName'
 import {
   buildDishLibrary,
   createCustomDishId,
@@ -50,12 +59,15 @@ import type {
   StampTier,
 } from '@/core/types'
 import { countUnicodeChars, isDishCategory, isMealType } from '@/data/dataRules'
-import { storage } from '@/storage'
+import { snapshotService, storage } from '@/storage'
 import {
+  APP_DATA_SCHEMA_VERSION,
+  APP_DATA_STORAGE_KEY,
   clearAppData,
   createEmptyAppData,
   ensureToday,
   loadAppData,
+  parseAppDataJson,
   recordStampCheckIn,
   saveAppData,
 } from '@/storage/appData'
@@ -64,7 +76,13 @@ import type {
   BinaryStorageAdapter,
   ImageMime,
   StoredImage,
+  StoredImageEntry,
 } from '@/storage/BinaryStorageAdapter'
+import { dataTransferLockName } from '@/storage/namespaces'
+import type { StorageNamespace } from '@/storage/namespaces'
+import type { SnapshotMeta, SnapshotReason } from '@/storage/SnapshotStore'
+import type { SnapshotService } from '@/storage/snapshots'
+import type { StorageAdapter } from '@/storage/StorageAdapter'
 import {
   PENDING_IMPORT_KEY,
   buildBackup,
@@ -72,9 +90,23 @@ import {
   parseBackupJson,
   serializeBackup,
 } from '@/storage/backup'
-import type { StorageAdapter } from '@/storage/StorageAdapter'
 
-export type AppStoreStatus = 'idle' | 'loading' | 'ready' | 'error'
+export type AppStoreStatus =
+  | 'idle'
+  | 'loading'
+  | 'ready'
+  | 'error'
+  | 'recovery'
+
+export type RecoveryReason = 'corrupt' | 'migration-failed' | 'future'
+
+export interface RecoveryState {
+  reason: RecoveryReason
+  message: string
+  raw: string | null
+  sourceVersion: number | null
+  snapshotId: string | null
+}
 
 export interface DrawReceipt {
   meal: MealType
@@ -83,6 +115,8 @@ export interface DrawReceipt {
   pityTriggered: boolean
   tokenCount: number
   pityCount: number
+  shuffled: boolean
+  singleCandidate: boolean
 }
 
 export type DrawActionResult =
@@ -141,7 +175,6 @@ export type ComponentBlockedReason =
   | 'not-in-pool'
   | 'component-missing'
   | 'not-redrawable'
-  | 'no-draws'
   | 'last-component'
   | 'restore-conflict'
   | 'missing-dish'
@@ -152,7 +185,7 @@ export type ComponentActionFailure =
   | { status: 'ad-cancelled' }
   | { status: 'stale'; message: string }
   | { status: 'blocked'; reason: ComponentBlockedReason }
-  | { status: 'no-candidate'; reason: 'empty-pool' | 'pity-unavailable' }
+  | { status: 'no-candidate'; reason: 'single-candidate' }
   | { status: 'error'; message: string }
 
 export type ComponentActionResult =
@@ -160,7 +193,12 @@ export type ComponentActionResult =
   | ComponentActionFailure
 
 export type RedrawActionResult =
-  | { status: 'redrawn'; source: DrawSource | null }
+  | {
+      status: 'redrawn'
+      source: DrawSource | null
+      shuffled: boolean
+      singleCandidate: boolean
+    }
   | ComponentActionFailure
 
 export interface CheckInOverrides {
@@ -188,6 +226,22 @@ export type ExportBackupResult =
 
 export type ClearDataResult =
   | { status: 'cleared' }
+  | { status: 'error'; message: string }
+
+export type ClearProfileResult =
+  | { status: 'cleared' }
+  | { status: 'error'; message: string }
+
+export type SnapshotListResult =
+  | { status: 'ok'; snapshots: SnapshotMeta[] }
+  | { status: 'error'; message: string }
+
+export type RestoreSnapshotResult =
+  | { status: 'restored' }
+  | { status: 'error'; message: string }
+
+export type ResetRecoveryResult =
+  | { status: 'reset' }
   | { status: 'error'; message: string }
 
 export interface CustomDishImageInput {
@@ -224,6 +278,7 @@ export type CustomDishActionResult =
 export interface AppStore {
   status: AppStoreStatus
   error: string | null
+  recovery: RecoveryState | null
   data: AppData
   todayKey: string
   /** 非持久化：最近一次可撤销的舍弃。 */
@@ -233,8 +288,9 @@ export interface AppStore {
   refreshForToday: () => Promise<void>
   updateData: (updater: (data: AppData) => AppData) => Promise<void>
   updateProfile: (profile: BodyProfile | null) => Promise<void>
-  clearProfile: () => Promise<void>
+  clearProfile: () => Promise<ClearProfileResult>
   setShowCalories: (enabled: boolean) => Promise<void>
+  setTheme: (theme: ThemeName) => Promise<void>
   dismissProfileHint: () => Promise<void>
   recordStamp: (dishId: string, dateKey?: string) => Promise<void>
   drawMeal: (type: MealType) => Promise<DrawActionResult>
@@ -268,6 +324,12 @@ export interface AppStore {
     type: MealType,
     candidateId: string,
     input: { name: string; calories: number | null },
+  ) => Promise<ComponentActionResult>
+  /** 手动改名；传 null 恢复自动/原始名字。 */
+  renameCombo: (
+    type: MealType,
+    candidateId: string,
+    name: string | null,
   ) => Promise<ComponentActionResult>
   discardComponent: (
     type: MealType,
@@ -305,6 +367,9 @@ export interface AppStore {
   exportBackup: () => Promise<ExportBackupResult>
   importJson: (json: string) => Promise<ImportDataResult>
   clearData: () => Promise<ClearDataResult>
+  listSnapshots: () => Promise<SnapshotListResult>
+  restoreSnapshot: (id: string) => Promise<RestoreSnapshotResult>
+  resetAfterRecovery: () => Promise<ResetRecoveryResult>
   createCustomDish: (input: CustomDishInput) => Promise<CustomDishActionResult>
   updateCustomDish: (
     dishId: string,
@@ -347,8 +412,8 @@ interface LockManagerLike {
   request<T>(name: string, task: () => Promise<T>): Promise<T>
 }
 
-/** 多标签页同时导入/导出时串行化；浏览器不支持 locks 时直接执行。 */
-function withDataLock<T>(task: () => Promise<T>): Promise<T> {
+/** 多标签页同时导入/导出/清空/迁移时串行化；不支持 locks 时直接执行。 */
+function withDataLock<T>(name: string, task: () => Promise<T>): Promise<T> {
   if (typeof navigator === 'undefined') {
     return task()
   }
@@ -356,7 +421,25 @@ function withDataLock<T>(task: () => Promise<T>): Promise<T> {
   if (!locks || typeof locks.request !== 'function') {
     return task()
   }
-  return locks.request('diet-diary:data-transfer', task)
+  return locks.request(name, task)
+}
+
+function readRawSchemaVersion(raw: string | null): number | null {
+  if (raw === null) {
+    return null
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return null
+    }
+    const version = (parsed as { schemaVersion?: unknown }).schemaVersion
+    return typeof version === 'number' && Number.isInteger(version)
+      ? version
+      : null
+  } catch {
+    return null
+  }
 }
 
 function readPendingImageIds(value: unknown): string[] {
@@ -431,10 +514,17 @@ function replaceMeal(
   }
 }
 
-function drawnComboIds(meal: MealRecord): string[] {
-  return meal.candidateCombos.flatMap((candidate) =>
-    candidate.comboId ? [candidate.comboId] : [],
-  )
+function roundComboIds(meal: MealRecord): string[] {
+  if (meal.drawnComboIds) {
+    return [...meal.drawnComboIds]
+  }
+  return [
+    ...new Set(
+      meal.candidateCombos.flatMap((candidate) =>
+        candidate.comboId ? [candidate.comboId] : [],
+      ),
+    ),
+  ]
 }
 
 function stampSnapshot(dish: {
@@ -562,14 +652,22 @@ function normalizeCustomDishInput(
   }
 }
 
+export interface AppStoreOptions {
+  snapshots?: SnapshotService
+  namespace?: StorageNamespace
+}
+
 export function createAppStore(
   adapter: StorageAdapter = storage,
   clock: () => string = () => toDateKey(),
   rng: Rng = Math.random,
   imageAdapter: BinaryStorageAdapter = storage,
+  options: AppStoreOptions = {},
 ) {
   return create<AppStore>()((set, get) => {
     const initialKey = clock()
+    const snapshots = options.snapshots ?? snapshotService
+    const lockName = dataTransferLockName(options.namespace ?? 'prod')
     let queue: Promise<unknown> = Promise.resolve()
 
     const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
@@ -585,18 +683,26 @@ export function createAppStore(
       set({
         status: 'error',
         error: errorMessage(error),
+        recovery: null,
       })
       throw error
     }
 
-    /** 上次导入可能停在“图片写完、数据没写”，启动时清掉这些孤儿图片。 */
-    const cleanupPendingImages = async (): Promise<void> => {
+    /**
+     * 上次导入可能停在“图片写完、数据没写”。只删除当前 app-data
+     * 没有引用的图片；数据已写但标记未删时，绝不能误删正在使用的图片。
+     */
+    const cleanupPendingImages = async (data: AppData): Promise<void> => {
       try {
         const pending = await adapter.get<unknown>(PENDING_IMPORT_KEY)
         if (pending === null || pending === undefined) {
           return
         }
+        const referenced = new Set(collectReferencedImageIds(data))
         for (const imageId of readPendingImageIds(pending)) {
+          if (referenced.has(imageId)) {
+            continue
+          }
           try {
             await imageAdapter.deleteImage(imageId)
           } catch {
@@ -610,29 +716,57 @@ export function createAppStore(
     }
 
     /**
-     * 串行执行一次读写。gameplay 的只读结果（例如需要广告）
+     * 串行队列内的一次读写。gameplay 的只读结果（例如需要广告）
      * 通过 next: null 表达，不触碰存储。
      */
+    const runAttempt = async <T>(
+      build: (data: AppData, todayKey: string) => AttemptOutcome<T>,
+    ): Promise<T> => {
+      const today = clock()
+      const current = ensureToday(get().data, today)
+      const outcome = build(current, today)
+
+      if (outcome.next === null) {
+        return outcome.result
+      }
+
+      await saveAppData(adapter, outcome.next)
+      set({
+        data: outcome.next,
+        todayKey: today,
+        status: 'ready',
+        error: null,
+        recovery: null,
+      })
+      return outcome.result
+    }
+
     const attempt = <T>(
       build: (data: AppData, todayKey: string) => AttemptOutcome<T>,
+    ): Promise<T> => enqueue(() => runAttempt(build))
+
+    /**
+     * 破坏性操作专用：在同一个队列任务里先快照，再执行 builder。
+     * 不能再调用 attempt/commit，否则会嵌套 enqueue 死锁。
+     */
+    const attemptWithSnapshot = <T>(
+      reason: SnapshotReason,
+      build: (data: AppData, todayKey: string) => AttemptOutcome<T>,
     ): Promise<T> =>
-      enqueue(async () => {
-        const today = clock()
-        const current = ensureToday(get().data, today)
-        const outcome = build(current, today)
+      enqueue(() =>
+        withDataLock(lockName, async () => {
+          await snapshots.capture({
+            reason,
+            data: get().status === 'recovery' ? null : get().data,
+          })
+          return runAttempt(build)
+        }),
+      )
 
-        if (outcome.next === null) {
-          return outcome.result
-        }
-
-        await saveAppData(adapter, outcome.next)
-        set({
-          data: outcome.next,
-          todayKey: today,
-          status: 'ready',
-          error: null,
-        })
-        return outcome.result
+    const captureCurrent = (reason: SnapshotReason) =>
+      snapshots.capture({
+        reason,
+        data: get().status === 'recovery' ? null : get().data,
       })
 
     const commit = async (
@@ -815,19 +949,30 @@ export function createAppStore(
         tokenCount: number
         pityCount: number
         pityTriggered: boolean
+        shuffled: boolean
+        singleCandidate: boolean
+        nextDrawnComboIds: string[]
       },
     ): AttemptOutcome<DrawActionResult> => {
       const day = data.days[todayKey]!
       const meal = day.meals[type]
       // 抽到的可能是自制菜的隐藏套餐，部件必须按当前菜品库解析，
       // 否则会退化成“缺失菜品”占位快照（名称是 id、没有热量和图片）。
-      const candidate = createComboCandidate(draw.combo, 'draw', draw.combo.id, {
+      const usedCandidateIds = new Set(
+        meal.candidateCombos.map((candidate) => candidate.id),
+      )
+      const candidateId = createCandidateInstanceId(
+        draw.combo.id,
+        usedCandidateIds,
+      )
+      const candidate = createComboCandidate(draw.combo, 'draw', candidateId, {
         dishById: buildDishLibrary(data).dishById,
       })
       const nextMeal: MealRecord = {
         ...meal,
         candidateCombos: [...meal.candidateCombos, candidate],
         budget: draw.budget,
+        drawnComboIds: draw.nextDrawnComboIds,
       }
       const next = replaceMeal(data, todayKey, type, nextMeal, data.stamps, {
         ...day.tokens,
@@ -848,6 +993,8 @@ export function createAppStore(
             pityTriggered: draw.pityTriggered,
             tokenCount: draw.tokenCount,
             pityCount: draw.pityCount,
+            shuffled: draw.shuffled,
+            singleCandidate: draw.singleCandidate,
           },
         },
       }
@@ -929,7 +1076,10 @@ export function createAppStore(
       }
 
       const nextMeal = {
-        ...replaceCandidate(meal, result.candidate),
+        ...replaceCandidate(
+          meal,
+          refreshComboName(result.candidate, type),
+        ),
         budget: result.budget,
       }
       const next = replaceMeal(data, todayKey, type, nextMeal, data.stamps, {
@@ -940,7 +1090,12 @@ export function createAppStore(
       return {
         outcome: {
           next: { ...next, pityCount: result.pityCount },
-          result: { status: 'redrawn', source: result.source },
+          result: {
+            status: 'redrawn',
+            source: result.source,
+            shuffled: result.shuffled,
+            singleCandidate: result.singleCandidate,
+          },
         },
       }
     }
@@ -956,8 +1111,9 @@ export function createAppStore(
       const day = data.days[todayKey]!
       const meal = day.meals[type]
       const library = buildDishLibrary(data)
+      const namedCandidate = refreshComboName(candidate, type)
       const checked = coreCheckInMeal({
-        candidate,
+        candidate: namedCandidate,
         budget: meal.budget,
         wallet: day.tokens,
         dateKey: todayKey,
@@ -1004,12 +1160,12 @@ export function createAppStore(
       }
 
       const finalCandidate: ComboCandidateSnapshot = {
-        ...candidate,
+        ...namedCandidate,
         components: checked.components,
       }
       const nextMeal: MealRecord = {
         ...replaceCandidate(meal, finalCandidate),
-        selectedCandidateId: candidate.id,
+        selectedCandidateId: namedCandidate.id,
         calories: checked.calories,
         budget: checked.budget,
       }
@@ -1028,7 +1184,7 @@ export function createAppStore(
           status: 'checked-in',
           receipt: {
             meal: type,
-            name: candidate.name,
+            name: finalCandidate.name,
             components: checked.components,
             calories: checked.calories,
             tokenRewarded: checked.tokenRewarded,
@@ -1043,6 +1199,7 @@ export function createAppStore(
     return {
       status: 'idle',
       error: null,
+      recovery: null,
       data: createEmptyAppData(initialKey),
       todayKey: initialKey,
       lastDiscard: null,
@@ -1053,19 +1210,58 @@ export function createAppStore(
           return
         }
 
-        set({ status: 'loading', error: null })
+        set({ status: 'loading', error: null, recovery: null })
         try {
-          await cleanupPendingImages()
-          const today = clock()
-          const loaded = await loadAppData(adapter, today)
-          const next = ensureToday(loaded, today)
-          await saveAppData(adapter, next)
-          set({
-            data: next,
-            todayKey: today,
-            status: 'ready',
-            error: null,
-            lastDiscard: null,
+          await withDataLock(lockName, async () => {
+            const today = clock()
+            const loaded = await loadAppData(adapter, today, { snapshots })
+
+            if (loaded.status === 'unavailable') {
+              throw new Error(loaded.error ?? '本地存储不可用')
+            }
+
+            if (
+              loaded.status === 'future' ||
+              loaded.status === 'corrupt' ||
+              loaded.status === 'migration-failed'
+            ) {
+              set({
+                status: 'recovery',
+                recovery: {
+                  reason:
+                    loaded.status === 'future'
+                      ? 'future'
+                      : loaded.status === 'corrupt'
+                        ? 'corrupt'
+                        : 'migration-failed',
+                  message: loaded.error ?? '数据读取失败',
+                  raw: loaded.raw,
+                  sourceVersion: loaded.sourceVersion,
+                  snapshotId: loaded.snapshotId,
+                },
+                data: createEmptyAppData(today),
+                todayKey: today,
+                error: null,
+                lastDiscard: null,
+              })
+              return
+            }
+
+            const next = ensureToday(loaded.data, today)
+            if (loaded.status === 'new') {
+              // 只有“确实没有数据”的全新用户才落盘默认值。
+              await saveAppData(adapter, next)
+            }
+
+            await cleanupPendingImages(next)
+            set({
+              data: next,
+              todayKey: today,
+              status: 'ready',
+              error: null,
+              recovery: null,
+              lastDiscard: null,
+            })
           })
         } catch (error) {
           fail(error)
@@ -1091,29 +1287,30 @@ export function createAppStore(
 
       updateProfile: async (profile) => {
         try {
-          await commit((data) => {
-            const hadProfile = data.profile !== null
-            const targetCalories = profile ? calcTargetCalories(profile) : null
-            const showCalories = profile
-              ? hadProfile
-                ? data.settings.showCalories
-                : true
-              : false
-
-            return {
-              ...data,
-              profile,
-              targetCalories,
-              settings: { ...data.settings, showCalories },
-            }
-          })
+          await commit((data) => ({
+            ...data,
+            profile,
+            targetCalories: profile ? calcTargetCalories(profile) : null,
+          }))
         } catch (error) {
           fail(error)
         }
       },
 
       clearProfile: async () => {
-        await get().updateProfile(null)
+        try {
+          await attemptWithSnapshot('before-clear-profile', (data) => ({
+            next: {
+              ...data,
+              profile: null,
+              targetCalories: null,
+            },
+            result: undefined,
+          }))
+          return { status: 'cleared' }
+        } catch (error) {
+          return { status: 'error', message: errorMessage(error) }
+        }
       },
 
       setShowCalories: async (enabled) => {
@@ -1122,7 +1319,21 @@ export function createAppStore(
             ...data,
             settings: {
               ...data.settings,
-              showCalories: data.profile === null ? false : enabled,
+              showCalories: enabled,
+            },
+          }))
+        } catch (error) {
+          fail(error)
+        }
+      },
+
+      setTheme: async (theme) => {
+        try {
+          await commit((data) => ({
+            ...data,
+            settings: {
+              ...data.settings,
+              theme,
             },
           }))
         } catch (error) {
@@ -1175,7 +1386,7 @@ export function createAppStore(
                 budget: meal.budget,
                 tokenCount: validTokenCount(day, todayKey),
                 pityCount: data.pityCount,
-                candidateComboIds: drawnComboIds(meal),
+                drawnComboIds: roundComboIds(meal),
               },
               { rng, catalog: buildDishLibrary(data).combos },
             )
@@ -1230,7 +1441,7 @@ export function createAppStore(
             if (!allowance.canDraw) {
               return {
                 next: null,
-                result: { status: 'blocked', reason: 'no-draws' },
+                result: { status: 'blocked', reason: 'checked-in' },
               }
             }
             if (allowance.nextSource !== 'ad') {
@@ -1249,7 +1460,7 @@ export function createAppStore(
                 budget: meal.budget,
                 tokenCount,
                 pityCount: data.pityCount,
-                candidateComboIds: drawnComboIds(meal),
+                drawnComboIds: roundComboIds(meal),
               },
               {
                 rng,
@@ -1430,7 +1641,10 @@ export function createAppStore(
             }
 
             try {
-              const nextCandidate = addDishComponent(candidate, dish, type)
+              const nextCandidate = refreshComboName(
+                addDishComponent(candidate, dish, type),
+                type,
+              )
               return {
                 next: replaceMeal(
                   data,
@@ -1469,7 +1683,63 @@ export function createAppStore(
             }
 
             try {
-              const nextCandidate = addCustomComponent(candidate, input)
+              const nextCandidate = refreshComboName(
+                addCustomComponent(candidate, input),
+                type,
+              )
+              return {
+                next: replaceMeal(
+                  data,
+                  todayKey,
+                  type,
+                  replaceCandidate(meal, nextCandidate),
+                ),
+                result: { status: 'updated' },
+              }
+            } catch (error) {
+              return { next: null, result: errorResult(error) }
+            }
+          })
+        } catch (error) {
+          return errorResult(error)
+        }
+      },
+
+      renameCombo: async (type, candidateId, name) => {
+        try {
+          return await attempt<ComponentActionResult>((data, todayKey) => {
+            const day = data.days[todayKey]!
+            const meal = day.meals[type]
+            if (meal.budget.checkedIn) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'checked-in' },
+              }
+            }
+            if (meal.selectedCandidateId !== candidateId) {
+              return {
+                next: null,
+                result: {
+                  status: 'blocked',
+                  reason: meal.selectedCandidateId
+                    ? 'not-in-pool'
+                    : 'no-selection',
+                },
+              }
+            }
+            const candidate = findCandidate(meal, candidateId)
+            if (!candidate) {
+              return {
+                next: null,
+                result: { status: 'blocked', reason: 'not-in-pool' },
+              }
+            }
+
+            try {
+              const nextCandidate =
+                name === null
+                  ? withAutoComboName(candidate, type)
+                  : withManualComboName(candidate, name)
               return {
                 next: replaceMeal(
                   data,
@@ -1519,7 +1789,10 @@ export function createAppStore(
             }
 
             try {
-              const nextCandidate = discardComponent(candidate, componentId)
+              const nextCandidate = refreshComboName(
+                discardComponent(candidate, componentId),
+                type,
+              )
               set({
                 lastDiscard: {
                   dateKey: todayKey,
@@ -1583,9 +1856,9 @@ export function createAppStore(
             }
 
             try {
-              const nextCandidate = restoreComponent(
-                candidate,
-                last.componentId,
+              const nextCandidate = refreshComboName(
+                restoreComponent(candidate, last.componentId),
+                last.meal,
               )
               set({ lastDiscard: null })
               return {
@@ -1944,7 +2217,7 @@ export function createAppStore(
       exportBackup: async () => {
         try {
           return await enqueue<ExportBackupResult>(() =>
-            withDataLock(async () => {
+            withDataLock(lockName, async () => {
               const data = get().data
               const images = new Map<string, StoredImage>()
               for (const imageId of collectReferencedImageIds(data)) {
@@ -1967,7 +2240,7 @@ export function createAppStore(
       importJson: async (json) => {
         try {
           return await enqueue<ImportDataResult>(() =>
-            withDataLock(async () => {
+            withDataLock(lockName, async () => {
               const today = clock()
               const parsed = parseBackupJson(json, today)
               const fromPackage = new Set(
@@ -1987,8 +2260,8 @@ export function createAppStore(
                 }
               }
 
-              // 先写图片，再写主数据；失败时只回滚本次新建的图片。
-              const created: string[] = []
+              // 先预检全部图片，收集本次真正需要新建的图片。
+              const newImages: StoredImageEntry[] = []
               for (const image of parsed.images) {
                 const existing = await imageAdapter.getImage(image.imageId)
                 if (existing) {
@@ -2002,23 +2275,39 @@ export function createAppStore(
                   }
                   continue
                 }
-                await imageAdapter.putImage(image.imageId, {
+                newImages.push({
+                  imageId: image.imageId,
                   mime: image.mime,
                   bytes: image.bytes,
                 })
-                created.push(image.imageId)
               }
 
-              if (created.length > 0) {
-                await adapter.set(PENDING_IMPORT_KEY, { imageIds: created })
+              // 真正开始覆盖前才快照；校验失败不会产生无意义快照。
+              await captureCurrent('before-import')
+
+              if (newImages.length > 0) {
+                // 标记先写：中途崩溃时，下次启动能识别并清理未完成导入的图片。
+                await adapter.set(PENDING_IMPORT_KEY, {
+                  imageIds: newImages.map((image) => image.imageId),
+                })
+                try {
+                  await imageAdapter.putImages(newImages)
+                } catch (error) {
+                  try {
+                    await adapter.remove(PENDING_IMPORT_KEY)
+                  } catch {
+                    // 标记清理失败会在下次启动时兜底。
+                  }
+                  throw error
+                }
               }
 
               try {
                 await saveAppData(adapter, parsed.data)
               } catch (error) {
-                for (const imageId of created) {
+                for (const image of newImages) {
                   try {
-                    await imageAdapter.deleteImage(imageId)
+                    await imageAdapter.deleteImage(image.imageId)
                   } catch {
                     // 回滚尽力而为，留下孤儿图片也不会破图。
                   }
@@ -2042,6 +2331,7 @@ export function createAppStore(
                 todayKey: today,
                 status: 'ready',
                 error: null,
+                recovery: null,
                 lastDiscard: null,
               })
               return { status: 'imported' }
@@ -2055,28 +2345,147 @@ export function createAppStore(
 
       clearData: async () => {
         try {
-          return await enqueue<ClearDataResult>(async () => {
-            const today = clock()
-            await clearAppData(adapter, today)
-            set({
-              data: createEmptyAppData(today),
-              todayKey: today,
-              status: 'ready',
-              error: null,
-              lastDiscard: null,
-            })
+          return await enqueue<ClearDataResult>(() =>
+            withDataLock(lockName, async () => {
+              await captureCurrent('before-clear')
 
-            // 主数据已经清空；图片清理失败只提示，不回滚记录。
-            try {
-              await imageAdapter.clearImages()
-            } catch (error) {
-              return {
-                status: 'error',
-                message: `记录已清空，但图片清理失败：${errorMessage(error)}`,
+              const today = clock()
+              await clearAppData(adapter, today)
+              set({
+                data: createEmptyAppData(today),
+                todayKey: today,
+                status: 'ready',
+                error: null,
+                recovery: null,
+                lastDiscard: null,
+              })
+
+              // 主数据已经清空；图片清理失败只提示，快照仍可恢复。
+              try {
+                await imageAdapter.clearImages()
+              } catch (error) {
+                return {
+                  status: 'error',
+                  message: `记录已清空，但图片清理失败：${errorMessage(error)}`,
+                }
               }
-            }
-            return { status: 'cleared' }
-          })
+              return { status: 'cleared' }
+            }),
+          )
+        } catch (error) {
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+
+      listSnapshots: async () => {
+        try {
+          return { status: 'ok', snapshots: await snapshots.list() }
+        } catch (error) {
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+
+      restoreSnapshot: async (id) => {
+        try {
+          return await enqueue<RestoreSnapshotResult>(() =>
+            withDataLock(lockName, async () => {
+              const payload = await snapshots.read(id)
+              if (!payload) {
+                throw new Error('这份快照已经不存在了')
+              }
+
+              const today = clock()
+              const data =
+                payload.raw === null
+                  ? createEmptyAppData(today)
+                  : parseAppDataJson(payload.raw, today)
+
+              const before = await captureCurrent('before-restore')
+              const beforePayload = await snapshots.read(before.id)
+
+              try {
+                await imageAdapter.putImages(payload.images)
+
+                if (
+                  payload.raw !== null &&
+                  readRawSchemaVersion(payload.raw) === APP_DATA_SCHEMA_VERSION
+                ) {
+                  // 当前版本原样写回，最大限度保留未知字段。
+                  await adapter.setRaw(APP_DATA_STORAGE_KEY, payload.raw)
+                } else {
+                  await saveAppData(adapter, data)
+                }
+              } catch (error) {
+                if (beforePayload) {
+                  try {
+                    await imageAdapter.putImages(beforePayload.images)
+                  } catch {
+                    // 图片回滚失败时仍保留两份快照，下面会返回错误。
+                  }
+                  try {
+                    if (beforePayload.raw !== null) {
+                      await adapter.setRaw(
+                        APP_DATA_STORAGE_KEY,
+                        beforePayload.raw,
+                      )
+                    } else {
+                      await saveAppData(
+                        adapter,
+                        createEmptyAppData(today),
+                      )
+                    }
+                  } catch {
+                    // raw 回滚失败时，原始值仍在 before-restore 快照里。
+                  }
+                }
+                throw error
+              }
+
+              set({
+                data,
+                todayKey: today,
+                status: 'ready',
+                error: null,
+                recovery: null,
+                lastDiscard: null,
+              })
+              return { status: 'restored' }
+            }),
+          )
+        } catch (error) {
+          return { status: 'error', message: errorMessage(error) }
+        }
+      },
+
+      resetAfterRecovery: async () => {
+        try {
+          return await enqueue<ResetRecoveryResult>(() =>
+            withDataLock(lockName, async () => {
+              const state = get()
+              if (state.status !== 'recovery' || state.recovery === null) {
+                throw new Error('当前不在数据恢复模式')
+              }
+
+              await snapshots.capture({
+                reason: 'before-recovery',
+                data: null,
+                raw: state.recovery.raw,
+              })
+
+              const today = clock()
+              const empty = createEmptyAppData(today)
+              await saveAppData(adapter, empty)
+              set({
+                data: empty,
+                todayKey: today,
+                status: 'ready',
+                error: null,
+                recovery: null,
+                lastDiscard: null,
+              })
+              return { status: 'reset' }
+            }),
+          )
         } catch (error) {
           return { status: 'error', message: errorMessage(error) }
         }

@@ -11,6 +11,11 @@ export interface StoredImage {
   bytes: Uint8Array
 }
 
+/** 带业务键的图片，用于快照与批量写入。 */
+export interface StoredImageEntry extends StoredImage {
+  imageId: string
+}
+
 export const IMAGE_MIMES: readonly ImageMime[] = [
   'image/jpeg',
   'image/png',
@@ -27,6 +32,10 @@ export function isImageMime(value: unknown): value is ImageMime {
 export interface BinaryStorageAdapter {
   getImage(key: string): Promise<StoredImage | null>
   putImage(key: string, image: StoredImage): Promise<void>
+  /** 只读列出全部图片，供快照/恢复使用。 */
+  listImages(): Promise<StoredImageEntry[]>
+  /** 单事务批量写入；任一失败整批回滚，不 clear 现有图片。 */
+  putImages(entries: readonly StoredImageEntry[]): Promise<void>
   deleteImage(key: string): Promise<void>
   clearImages(): Promise<void>
 }

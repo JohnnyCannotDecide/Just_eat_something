@@ -8,11 +8,15 @@ import {
   createEmptyAppData,
   ensureToday,
   migrateV1ToV2,
+  migrateV2ToV3,
+  migrateV3ToV4,
+  migrateV4ToV5,
   normalizeAppData,
   parseAppDataJson,
   recordStampCheckIn,
   serializeAppData,
 } from './appData'
+import v4Fixture from './__fixtures__/app-data-v4.json'
 
 const DAY_0 = '2026-10-26'
 const DAY_1 = '2026-10-27'
@@ -133,15 +137,16 @@ describe('AppData defaults', () => {
     const data = createEmptyAppData(DAY_1)
     const day = data.days[DAY_1]!
 
-    expect(APP_DATA_SCHEMA_VERSION).toBe(2)
-    expect(data.schemaVersion).toBe(2)
+    expect(APP_DATA_SCHEMA_VERSION).toBe(5)
+    expect(data.schemaVersion).toBe(5)
     expect(data.profile).toBeNull()
     expect(data.targetCalories).toBeNull()
     expect(data.pityCount).toBe(0)
     expect(data.stamps).toEqual({})
     expect(data.settings).toEqual({
-      showCalories: false,
+      showCalories: true,
       profileHintDismissed: false,
+      theme: 'cute',
     })
     expect(Object.keys(data.days)).toEqual([DAY_1])
     expect(day.dateKey).toBe(DAY_1)
@@ -158,6 +163,7 @@ describe('AppData defaults', () => {
         selectedCandidateId: null,
         calories: null,
         budget: createMealDrawBudget(),
+        drawnComboIds: [],
       })
     }
   })
@@ -272,7 +278,7 @@ describe('v1 → v2 migration', () => {
 
     const lunch = data.days[DAY_1]!.meals.lunch
 
-    expect(data.schemaVersion).toBe(2)
+    expect(data.schemaVersion).toBe(5)
     expect(lunch.candidateCombos.map((item) => item.comboId)).toEqual([
       null,
       null,
@@ -537,9 +543,11 @@ describe('v1 → v2 migration', () => {
     expect(data.stamps.white_rice?.checkInDates).toEqual([DAY_0, DAY_0, DAY_0])
     expect(data.days[DAY_1]!.tokens.count).toBe(2)
     expect(data.days[DAY_1]!.tokens.customRewardClaimed).toBe(true)
+    // v2 → v3 统一打开热量显示，其余设置保留。
     expect(data.settings).toEqual({
-      showCalories: false,
+      showCalories: true,
       profileHintDismissed: false,
+      theme: 'cute',
     })
   })
 
@@ -559,6 +567,7 @@ describe('v1 → v2 migration', () => {
     expect(once.schemaVersion).toBe(2)
 
     const again = normalizeAppData(once, DAY_1)
+    expect(again.schemaVersion).toBe(5)
     expect(normalizeAppData(again, DAY_1)).toEqual(again)
 
     const v2Raw = v2Data()
@@ -584,6 +593,291 @@ describe('v1 → v2 migration', () => {
     expect(parseAppDataJson(JSON.stringify(raw), DAY_1)).toEqual(
       normalizeAppData(raw, DAY_1),
     )
+  })
+})
+
+describe('v2 → v3 migration', () => {
+  it('turns calorie display on and keeps the rest of the data', () => {
+    const data = normalizeAppData(
+      v2Data({
+        profile,
+        targetCalories: 999,
+        pityCount: 2,
+        settings: { showCalories: false, profileHintDismissed: true },
+      }),
+      DAY_1,
+    )
+
+    expect(data.schemaVersion).toBe(5)
+    expect(data.settings).toEqual({
+      showCalories: true,
+      profileHintDismissed: true,
+      theme: 'cute',
+    })
+    expect(data.profile).toEqual(profile)
+    expect(data.targetCalories).toBe(1584)
+    expect(data.pityCount).toBe(2)
+    expect(data.days[DAY_1]!.meals.lunch.candidateCombos).toHaveLength(1)
+  })
+
+  it('is idempotent and never downgrades newer data', () => {
+    const v2Raw = v2Data()
+    const once = migrateV2ToV3(v2Raw)
+    expect(once.schemaVersion).toBe(3)
+    expect(migrateV2ToV3(once)).toBe(once)
+
+    const v3Raw = { schemaVersion: 3, settings: { showCalories: false } }
+    expect(migrateV2ToV3(v3Raw)).toBe(v3Raw)
+  })
+
+  it('preserves unknown settings fields while forcing the switch', () => {
+    const migrated = migrateV2ToV3({
+      schemaVersion: 2,
+      settings: { showCalories: false, profileHintDismissed: true, extra: 1 },
+    })
+
+    expect(migrated.settings).toEqual({
+      showCalories: true,
+      profileHintDismissed: true,
+      theme: 'cute',
+      extra: 1,
+    })
+  })
+})
+
+describe('v3 → v4 migration', () => {
+  function v3Candidate(overrides: Record<string, unknown> = {}) {
+    return {
+      id: 'draw:v3:breakfast:0',
+      comboId: 'b_soy_youtiao',
+      source: 'draw',
+      rarity: 'R',
+      components: [
+        v2Component({
+          id: 'comp:soy',
+          dishId: 'soy_milk',
+          name: '豆浆',
+          category: 'drink',
+        }),
+      ],
+      unknownCandidateField: 'keep-candidate',
+      ...overrides,
+    }
+  }
+
+  function v3Data(overrides: Record<string, unknown> = {}) {
+    return {
+      schemaVersion: 3,
+      profile: null,
+      targetCalories: null,
+      pityCount: 0,
+      days: {
+        [DAY_1]: {
+          dateKey: DAY_1,
+          unknownDayField: 'keep-day',
+          meals: {
+            breakfast: {
+              candidateCombos: [v3Candidate()],
+              selectedCandidateId: 'draw:v3:breakfast:0',
+              calories: null,
+              budget: { baseUsed: 2, adUsed: 0, checkedIn: false },
+              unknownMealField: 'keep-meal',
+            },
+            lunch: { candidateCombos: [] },
+            dinner: { candidateCombos: [] },
+          },
+          tokens: { dateKey: DAY_1, count: 1, customRewardClaimed: false },
+        },
+      },
+      stamps: {},
+      customIngredients: [],
+      customDishes: [],
+      settings: { showCalories: true, profileHintDismissed: false, theme: 'cute' },
+      ...overrides,
+    }
+  }
+
+  it('fills the missing name from the frozen legacy map and keeps unknown fields', () => {
+    const raw = v3Data()
+    const migrated = migrateV3ToV4(raw)
+    const day = (migrated.days as Record<string, Record<string, unknown>>)[DAY_1]!
+    const breakfast = (day.meals as Record<string, Record<string, unknown>>)
+      .breakfast!
+    const candidate = (breakfast.candidateCombos as Record<string, unknown>[])[0]!
+
+    expect(migrated.schemaVersion).toBe(4)
+    expect(candidate.name).toBe('豆浆油条套餐')
+    expect(candidate.nameSource).toBe('legacy')
+    expect(candidate.baseName).toBe('豆浆油条套餐')
+    expect(candidate.baseDishIds).toEqual(['soy_milk', 'youtiao', 'tea_egg'])
+    expect(candidate.unknownCandidateField).toBe('keep-candidate')
+    expect(day.unknownDayField).toBe('keep-day')
+    expect(breakfast.unknownMealField).toBe('keep-meal')
+  })
+
+  it('falls back to component names for removed combos and fills manual names', () => {
+    const raw = v3Data({
+      days: {
+        [DAY_1]: {
+          meals: {
+            breakfast: {
+              candidateCombos: [
+                v3Candidate({
+                  id: 'draw:gone',
+                  comboId: 'gone_combo',
+                  components: [
+                    v2Component({ id: 'a', dishId: 'ghost_a', name: '神秘煎饼' }),
+                    v2Component({ id: 'b', dishId: 'ghost_b', name: '热豆浆' }),
+                  ],
+                }),
+                v3Candidate({
+                  id: 'draw:manual',
+                  comboId: null,
+                  name: '我的手写名字',
+                  nameSource: 'manual',
+                }),
+              ],
+            },
+          },
+        },
+      },
+    })
+    const migrated = migrateV3ToV4(raw)
+    const day = (migrated.days as Record<string, Record<string, unknown>>)[DAY_1]!
+    const breakfast = (day.meals as Record<string, Record<string, unknown>>)
+      .breakfast!
+    const candidates = breakfast.candidateCombos as Record<string, unknown>[]
+
+    expect(candidates[0]!.name).toBe('神秘煎饼和热豆浆')
+    expect(candidates[0]!.baseName).toBe('神秘煎饼和热豆浆')
+    expect(candidates[0]!.baseDishIds).toEqual(['ghost_a', 'ghost_b'])
+
+    expect(candidates[1]!.name).toBe('我的手写名字')
+    expect(candidates[1]!.nameSource).toBe('manual')
+    expect(candidates[1]!.manualName).toBe('我的手写名字')
+  })
+
+  it('is idempotent and returns v4 data unchanged', () => {
+    const once = migrateV3ToV4(v3Data())
+    const twice = migrateV3ToV4(once)
+    expect(twice).toEqual(once)
+
+    const v4 = { schemaVersion: 4 }
+    expect(migrateV3ToV4(v4)).toBe(v4)
+  })
+
+  it('does not discard candidates that are missing a name', () => {
+    const data = normalizeAppData(v3Data(), DAY_1)
+    const lunch = data.days[DAY_1]!.meals.breakfast
+
+    expect(lunch.candidateCombos).toHaveLength(1)
+    expect(lunch.candidateCombos[0]!.name).toBe('豆浆油条套餐')
+    expect(lunch.candidateCombos[0]!.nameSource).toBe('legacy')
+  })
+})
+
+describe('v4 → v5 migration', () => {
+  it('adds seenDishIds and derives drawnComboIds without losing user data', () => {
+    const raw = migrateV4ToV5(v4Fixture)
+    const data = normalizeAppData(v4Fixture, DAY_1)
+    const day = data.days['2026-10-26']!
+
+    expect(data.schemaVersion).toBe(5)
+
+    // 已打卡历史不追溯，seen 为空数组。
+    expect(
+      day.meals.breakfast.candidateCombos[0]!.components[0]!.seenDishIds,
+    ).toEqual([])
+    // 旧数据缺 drawnComboIds 时从候选推导，并去掉重复的 comboId。
+    expect(day.meals.breakfast.drawnComboIds).toEqual(['b_soy_youtiao'])
+    // 开放中的候选：库内部件以当前菜开局，自定义部件为空。
+    const lunch = day.meals.lunch.candidateCombos[0]!
+    expect(lunch.components.map((item) => item.seenDishIds)).toEqual([
+      ['beef_veg_rice'],
+      ['white_rice'],
+      [],
+    ])
+    expect(day.meals.lunch.drawnComboIds).toEqual(['l_beef_veg_rice'])
+
+    // 印章、券、保底、自制数据与未知字段原样保留。
+    expect(data.stamps.soy_milk?.checkInCount).toBe(2)
+    expect(day.tokens).toEqual({
+      dateKey: '2026-10-26',
+      count: 2,
+      customRewardClaimed: true,
+    })
+    expect(data.pityCount).toBe(3)
+    expect(data.customDishes.map((dish) => dish.id)).toEqual([
+      'custom_dish:test-v4',
+    ])
+    expect(data.customIngredients.map((item) => item.id)).toEqual([
+      'custom_ingredient:test-v4',
+    ])
+
+    expect(raw.unknownRootField).toBe('keep-root')
+    const rawDay = (raw.days as Record<string, Record<string, unknown>>)[
+      '2026-10-26'
+    ]!
+    expect(rawDay.unknownDayField).toBe('keep-day')
+    const rawBreakfast = (rawDay.meals as Record<string, Record<string, unknown>>)
+      .breakfast!
+    expect(rawBreakfast.unknownMealField).toBe('keep-meal')
+    const rawCandidates = rawBreakfast.candidateCombos as Record<
+      string,
+      unknown
+    >[]
+    expect(rawCandidates[1]!.unknownCandidateField).toBe('keep-candidate')
+    const rawComponents = rawCandidates[1]!.components as Record<
+      string,
+      unknown
+    >[]
+    expect(rawComponents[0]!.unknownComponentField).toBe('keep-component')
+  })
+
+  it('is idempotent and returns v5 data unchanged', () => {
+    const once = migrateV4ToV5(v4Fixture)
+    expect(migrateV4ToV5(once)).toEqual(once)
+
+    const v5 = { schemaVersion: 5 }
+    expect(migrateV4ToV5(v5)).toBe(v5)
+  })
+
+  it('keeps valid seenDishIds and drawnComboIds from partially migrated data', () => {
+    const raw = migrateV4ToV5({
+      schemaVersion: 4,
+      days: {
+        [DAY_1]: {
+          meals: {
+            lunch: {
+              drawnComboIds: ['test_keep', 'test_keep', ''],
+              candidateCombos: [
+                {
+                  comboId: 'test_other',
+                  components: [
+                    {
+                      kind: 'dish',
+                      dishId: 'test_dish',
+                      seenDishIds: ['test_dish', 'test_prev', 'test_dish'],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+    })
+
+    const lunch = (
+      (raw.days as Record<string, Record<string, unknown>>)[DAY_1]!
+        .meals as Record<string, Record<string, unknown>>
+    ).lunch!
+    expect(lunch.drawnComboIds).toEqual(['test_keep'])
+    const component = (
+      (lunch.candidateCombos as Record<string, unknown>[])[0]!
+        .components as Record<string, unknown>[]
+    )[0]!
+    expect(component.seenDishIds).toEqual(['test_dish', 'test_prev'])
   })
 })
 
@@ -754,7 +1048,7 @@ describe('versioning and settings', () => {
     )
     expect(() => normalizeAppData({}, DAY_1)).toThrow('schemaVersion')
 
-    for (const version of [3, 99]) {
+    for (const version of [APP_DATA_SCHEMA_VERSION + 1, 99]) {
       expect(() =>
         normalizeAppData({ schemaVersion: version }, DAY_1),
       ).toThrow('高于当前支持')
@@ -771,8 +1065,9 @@ describe('versioning and settings', () => {
       DAY_1,
     )
     expect(legacyGuest.settings).toEqual({
-      showCalories: false,
+      showCalories: true,
       profileHintDismissed: false,
+      theme: 'cute',
     })
 
     const legacyProfile = normalizeAppData(
@@ -788,10 +1083,47 @@ describe('versioning and settings', () => {
     expect(legacyProfile.settings).toEqual({
       showCalories: true,
       profileHintDismissed: true,
+      theme: 'cute',
     })
   })
 
-  it('keeps explicit settings while forcing calories off without a profile', () => {
+  it('defaults missing or invalid themes and preserves a valid choice', () => {
+    const base = {
+      schemaVersion: APP_DATA_SCHEMA_VERSION,
+      days: {},
+      stamps: {},
+    }
+
+    expect(
+      normalizeAppData(
+        { ...base, settings: { showCalories: true } },
+        DAY_1,
+      ).settings.theme,
+    ).toBe('cute')
+
+    expect(
+      normalizeAppData(
+        { ...base, settings: { showCalories: true, theme: 'vivid' } },
+        DAY_1,
+      ).settings.theme,
+    ).toBe('vivid')
+
+    expect(
+      normalizeAppData(
+        { ...base, settings: { showCalories: true, theme: 'midnight' } },
+        DAY_1,
+      ).settings.theme,
+    ).toBe('cute')
+
+    expect(
+      normalizeAppData(
+        { ...base, settings: { showCalories: true, theme: null } },
+        DAY_1,
+      ).settings.theme,
+    ).toBe('cute')
+  })
+
+  it('preserves explicit settings whether or not a profile exists', () => {
     const withProfile = normalizeAppData(
       {
         schemaVersion: APP_DATA_SCHEMA_VERSION,
@@ -805,6 +1137,7 @@ describe('versioning and settings', () => {
     expect(withProfile.settings).toEqual({
       showCalories: false,
       profileHintDismissed: false,
+      theme: 'cute',
     })
 
     const guest = normalizeAppData(
@@ -818,8 +1151,20 @@ describe('versioning and settings', () => {
       DAY_1,
     )
     expect(guest.profile).toBeNull()
-    expect(guest.settings.showCalories).toBe(false)
+    expect(guest.settings.showCalories).toBe(true)
     expect(guest.settings.profileHintDismissed).toBe(true)
+
+    const guestOff = normalizeAppData(
+      {
+        schemaVersion: APP_DATA_SCHEMA_VERSION,
+        settings: { showCalories: false },
+        days: {},
+        stamps: {},
+      },
+      DAY_1,
+    )
+    expect(guestOff.profile).toBeNull()
+    expect(guestOff.settings.showCalories).toBe(false)
   })
 
   it('rejects invalid profile, count, and date keys', () => {

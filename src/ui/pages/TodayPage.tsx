@@ -16,6 +16,7 @@ import { AddComponentSheet } from '../components/gameplay/AddComponentSheet'
 import { CheckInSheet } from '../components/gameplay/CheckInSheet'
 import { CustomMealSheet } from '../components/gameplay/CustomMealSheet'
 import { DrawOverlay } from '../components/gameplay/DrawOverlay'
+import { RenameComboSheet } from '../components/gameplay/RenameComboSheet'
 import { RewardOverlay } from '../components/gameplay/RewardOverlay'
 import { CalorieBento } from '../components/today/CalorieBento'
 import { GuestHintCard } from '../components/today/GuestHintCard'
@@ -25,6 +26,7 @@ import { buildTodayView } from '../selectors/todayView'
 import {
   DRAW_BLOCKED_MESSAGES,
   REDRAW_NO_CANDIDATE_MESSAGES,
+  SHUFFLE_MESSAGE,
 } from '../copy'
 
 type ActivePanel =
@@ -32,6 +34,7 @@ type ActivePanel =
   | { kind: 'checkIn'; meal: MealType }
   | { kind: 'custom'; meal: MealType }
   | { kind: 'addComponent'; meal: MealType; candidateId: string }
+  | { kind: 'rename'; meal: MealType; candidateId: string }
   | { kind: 'reward'; receipt: CheckInReceipt }
 
 const COMPONENT_BLOCKED_MESSAGES: Record<string, string> = {
@@ -40,7 +43,6 @@ const COMPONENT_BLOCKED_MESSAGES: Record<string, string> = {
   'not-in-pool': '这份套餐已经不在候选里了',
   'component-missing': '这个部件找不到了',
   'not-redrawable': '自定义记录不能重抽',
-  'no-draws': '这餐的次数用完啦',
   'last-component': '至少要保留一个部件',
   'restore-conflict': '套餐里已经有这道菜，无法撤销',
   'missing-dish': '这道菜暂时找不到了',
@@ -179,7 +181,11 @@ export function TodayPage() {
       switch (result.status) {
         case 'redrawn':
           showToast(
-            result.source ? '换好一个部件啦' : '免费换好一个部件啦',
+            result.shuffled
+              ? SHUFFLE_MESSAGE
+              : result.source
+                ? '换好一个部件啦'
+                : '免费换好一个部件啦',
           )
           break
         case 'no-candidate':
@@ -485,6 +491,46 @@ export function TodayPage() {
     setPanel({ kind: 'custom', meal })
   }, [])
 
+  const openRename = useCallback(
+    (meal: MealType, candidateId: string) => {
+      setSheetError(null)
+      setPanel({ kind: 'rename', meal, candidateId })
+    },
+    [],
+  )
+
+  const handleRenameSubmit = useCallback(
+    async (
+      meal: MealType,
+      candidateId: string,
+      name: string | null,
+    ) => {
+      if (!beginMeal(meal)) {
+        return
+      }
+
+      setSheetError(null)
+      try {
+        const result = await useAppStore
+          .getState()
+          .renameCombo(meal, candidateId, name)
+        if (result.status === 'updated') {
+          closePanel()
+          showToast(name === null ? '名字恢复自动啦' : '名字换好啦')
+        } else if (result.status === 'blocked') {
+          setSheetError(
+            COMPONENT_BLOCKED_MESSAGES[result.reason] ?? '暂时不能改名',
+          )
+        } else if (result.status === 'error') {
+          setSheetError(result.message)
+        }
+      } finally {
+        endMeal(meal)
+      }
+    },
+    [beginMeal, closePanel, endMeal, showToast],
+  )
+
   const panelMeal =
     panel && panel.kind !== 'draw' && panel.kind !== 'reward'
       ? view.meals.find((meal) => meal.type === panel.meal)
@@ -504,6 +550,13 @@ export function TodayPage() {
 
   const panelCandidateForAdd: ComboCandidateSnapshot | null =
     panel?.kind === 'addComponent'
+      ? (panelRecord?.candidateCombos.find(
+          (candidate) => candidate.id === panel.candidateId,
+        ) ?? null)
+      : null
+
+  const panelCandidateForRename: ComboCandidateSnapshot | null =
+    panel?.kind === 'rename'
       ? (panelRecord?.candidateCombos.find(
           (candidate) => candidate.id === panel.candidateId,
         ) ?? null)
@@ -532,7 +585,10 @@ export function TodayPage() {
         />
       )}
 
-      <CalorieBento view={view} />
+      <CalorieBento
+        view={view}
+        onOpenProfile={() => openProfileEditor(0)}
+      />
 
       <div className="section-head">
         <div>
@@ -550,6 +606,7 @@ export function TodayPage() {
         showCalories={view.showCalories}
         onDraw={handleDraw}
         onSelectCombo={handleSelectCombo}
+        onRenameCombo={openRename}
         onCheckIn={openCheckIn}
         onCustom={openCustom}
         onRedraw={handleRedraw}
@@ -575,6 +632,7 @@ export function TodayPage() {
             mealLabel={panelMeal.label}
             candidate={panelCandidate}
             pending={pendingMeals.includes(panel.meal)}
+            stapleHint={panelMeal.stapleHint}
             showCalories={view.showCalories}
             error={sheetError}
             onClose={closePanel}
@@ -613,6 +671,26 @@ export function TodayPage() {
             }}
             onAddCustom={(input) => {
               void handleAddCustom(panel.meal, panel.candidateId, input)
+            }}
+          />
+        )}
+
+      {panel?.kind === 'rename' &&
+        panelMeal &&
+        panelCandidateForRename && (
+          <RenameComboSheet
+            key={`${panel.meal}-${panelCandidateForRename.id}-rename`}
+            mealLabel={panelMeal.label}
+            currentName={panelCandidateForRename.name}
+            pending={pendingMeals.includes(panel.meal)}
+            error={sheetError}
+            onClose={closePanel}
+            onSubmit={(name) => {
+              void handleRenameSubmit(
+                panel.meal,
+                panel.candidateId,
+                name,
+              )
             }}
           />
         )}

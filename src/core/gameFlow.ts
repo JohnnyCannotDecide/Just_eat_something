@@ -1,4 +1,4 @@
-import { PITY, componentRedrawCostsDraw } from '@/config/gameConfig'
+import { componentRedrawCostsDraw } from '@/config/gameConfig'
 import {
   combos as defaultComboCatalog,
   dishById as defaultDishById,
@@ -18,7 +18,7 @@ import {
 } from './components'
 import { consumeDraw, getDrawAllowance, markMealCheckedIn } from './drawBudget'
 import type { DrawSource, MealDrawBudget } from './drawBudget'
-import { drawByRarity, drawCombo } from './draw'
+import { drawByRarity } from './draw'
 import type { Rng } from './draw'
 import { grantCheckInToken } from './tokens'
 import type { TokenWallet } from './tokens'
@@ -32,14 +32,15 @@ import type {
   MealType,
 } from './types'
 
-export type DrawBlockedReason = 'checked-in' | 'no-draws' | 'pool-exhausted'
+export type DrawBlockedReason = 'checked-in' | 'pool-empty'
 
 export interface MealDrawInput {
   meal: MealType
   budget: MealDrawBudget
   tokenCount: number
   pityCount: number
-  candidateComboIds: readonly string[]
+  /** 本轮已经抽到的套餐 id；耗尽后由 drawForMeal 洗牌重置。 */
+  drawnComboIds: readonly string[]
 }
 
 export interface MealDrawOptions {
@@ -58,24 +59,21 @@ export type MealDrawResult =
       tokenCount: number
       pityCount: number
       pityTriggered: boolean
+      shuffled: boolean
+      singleCandidate: boolean
+      nextDrawnComboIds: string[]
     }
   | { status: 'requires-ad' }
   | { status: 'blocked'; reason: DrawBlockedReason }
 
-/** 判断当前餐次还有没有可抽的套餐；不影响保底或次数的计算。 */
-function isMealPoolExhausted(
-  meal: MealType,
-  candidateComboIds: readonly string[],
-  catalog: readonly Combo[],
-): boolean {
-  const drawn = new Set(candidateComboIds)
-  const pool = catalog.filter((combo) => combo.meals.includes(meal))
-  return pool.length === 0 || pool.every((combo) => drawn.has(combo.id))
+function uniqueIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)]
 }
 
 /**
  * 一次套餐抽卡请求：先按 core 的次数顺序判定来源，再消耗次数并抽卡。
  * 广告来源必须先看完整广告；未完成时只返回 requires-ad，不写任何状态。
+ * 当前轮抽完后洗牌继续，不阻断；洗牌时避开上一份套餐。
  */
 export function drawForMeal(
   input: MealDrawInput,
@@ -84,10 +82,7 @@ export function drawForMeal(
   const allowance = getDrawAllowance(input.budget, input.tokenCount)
 
   if (!allowance.canDraw) {
-    return {
-      status: 'blocked',
-      reason: input.budget.checkedIn ? 'checked-in' : 'no-draws',
-    }
+    return { status: 'blocked', reason: 'checked-in' }
   }
 
   if (allowance.nextSource === 'ad' && !options.adCompleted) {
@@ -95,29 +90,52 @@ export function drawForMeal(
   }
 
   const catalog = options.catalog ?? defaultComboCatalog
-  if (isMealPoolExhausted(input.meal, input.candidateComboIds, catalog)) {
-    return { status: 'blocked', reason: 'pool-exhausted' }
+  const pool = catalog.filter((combo) => combo.meals.includes(input.meal))
+  if (pool.length === 0) {
+    return { status: 'blocked', reason: 'pool-empty' }
   }
 
-  const draw = drawCombo(
-    {
-      pityCount: input.pityCount,
-      drawnComboIds: input.candidateComboIds,
-    },
-    input.meal,
-    options.rng,
-    catalog,
-  )
+  const round = uniqueIds(input.drawnComboIds)
+  const seen = new Set(round)
+  const exhausted = pool.every((combo) => seen.has(combo.id))
+
+  let candidates: Combo[]
+  let shuffled = false
+  let singleCandidate = false
+  if (exhausted) {
+    shuffled = true
+    const previous = [...round]
+      .reverse()
+      .find((id) => pool.some((combo) => combo.id === id))
+    const withoutPrevious = previous
+      ? pool.filter((combo) => combo.id !== previous)
+      : pool
+    if (withoutPrevious.length === 0) {
+      candidates = pool
+      singleCandidate = true
+    } else {
+      candidates = withoutPrevious
+    }
+  } else {
+    candidates = pool.filter((combo) => !seen.has(combo.id))
+  }
+
+  const draw = drawByRarity(candidates, input.pityCount, options.rng)
   const consumed = consumeDraw(input.budget, input.tokenCount)
 
   return {
     status: 'drawn',
-    combo: draw.combo,
+    combo: draw.item,
     source: consumed.source,
     budget: consumed.budget,
     tokenCount: consumed.tokenCount,
     pityCount: draw.pityCount,
     pityTriggered: draw.pityTriggered,
+    shuffled,
+    singleCandidate,
+    nextDrawnComboIds: exhausted
+      ? [draw.item.id]
+      : [...round, draw.item.id],
   }
 }
 
@@ -140,19 +158,15 @@ export type RedrawComponentResult =
       tokenCount: number
       pityCount: number
       pityTriggered: boolean
+      shuffled: boolean
+      singleCandidate: boolean
     }
   | { status: 'requires-ad' }
   | {
       status: 'blocked'
-      reason: 'checked-in' | 'no-draws' | 'component-missing' | 'not-redrawable'
+      reason: 'checked-in' | 'component-missing' | 'not-redrawable'
     }
-  | { status: 'no-candidate'; reason: 'empty-pool' | 'pity-unavailable' }
-
-function hasGuaranteedCandidate(candidates: readonly Dish[]): boolean {
-  return candidates.some((dish) =>
-    PITY.guaranteedRarities.some((rarity) => dish.rarity === rarity),
-  )
-}
+  | { status: 'no-candidate'; reason: 'single-candidate' }
 
 function activeDishIds(candidate: ComboCandidateSnapshot): Set<string> {
   const ids = new Set<string>()
@@ -193,14 +207,18 @@ export function redrawComponent(
   if (!target || target.discarded) {
     return { status: 'blocked', reason: 'component-missing' }
   }
-  if (target.kind === 'custom' || target.category === null) {
+  if (
+    target.kind === 'custom' ||
+    target.dishId === null ||
+    target.category === null
+  ) {
     return { status: 'blocked', reason: 'not-redrawable' }
   }
 
   const category: DishCategory = target.category
   const dishCatalog = options.dishCatalog ?? defaultDishCatalog
   const activeIds = activeDishIds(input.candidate)
-  const candidates = dishCatalog.filter(
+  const eligible = dishCatalog.filter(
     (dish) =>
       dish.meals.includes(input.meal) &&
       dish.category === category &&
@@ -208,68 +226,74 @@ export function redrawComponent(
       !activeIds.has(dish.id),
   )
 
+  if (eligible.length === 0) {
+    return { status: 'no-candidate', reason: 'single-candidate' }
+  }
+
+  const slotSeen = uniqueIds([
+    ...(target.seenDishIds ?? []),
+    target.dishId,
+  ])
+  const seen = new Set(slotSeen)
+  let candidates = eligible.filter((dish) => !seen.has(dish.id))
+  let shuffled = false
+  let nextSeen: string[] = slotSeen
+
   if (candidates.length === 0) {
-    return { status: 'no-candidate', reason: 'empty-pool' }
+    shuffled = true
+    nextSeen = [target.dishId]
+    const previous = slotSeen.at(-2)
+    const withoutPrevious =
+      previous !== undefined
+        ? eligible.filter((dish) => dish.id !== previous)
+        : eligible
+    if (withoutPrevious.length === 0) {
+      return { status: 'no-candidate', reason: 'single-candidate' }
+    }
+    candidates = withoutPrevious
   }
 
   const costsDraw = options.costsDraw ?? componentRedrawCostsDraw
-  const pityActive = input.pityCount >= PITY.missThreshold
-
-  if (costsDraw && pityActive && !hasGuaranteedCandidate(candidates)) {
-    return { status: 'no-candidate', reason: 'pity-unavailable' }
-  }
-
   let source: DrawSource | null = null
   let budget = input.budget
   let tokenCount = input.tokenCount
   let pityCount = input.pityCount
   let pityTriggered = false
-  let drawnDish: Dish | null = null
 
   if (costsDraw) {
     const allowance = getDrawAllowance(input.budget, input.tokenCount)
     if (!allowance.canDraw) {
-      return {
-        status: 'blocked',
-        reason: input.budget.checkedIn ? 'checked-in' : 'no-draws',
-      }
+      return { status: 'blocked', reason: 'checked-in' }
     }
     if (allowance.nextSource === 'ad' && !options.adCompleted) {
       return { status: 'requires-ad' }
     }
 
-    const draw = drawByRarity(
-      candidates,
-      input.pityCount,
-      options.rng,
-      'strict',
-    )
+    const draw = drawByRarity(candidates, input.pityCount, options.rng)
     const consumed = consumeDraw(input.budget, input.tokenCount)
     source = consumed.source
     budget = consumed.budget
     tokenCount = consumed.tokenCount
     pityCount = draw.pityCount
     pityTriggered = draw.pityTriggered
-    drawnDish = draw.item
+    candidates = [draw.item]
   } else {
     // 免费重抽不扣次数、不改保底，也不利用保底选择稀有度。
-    const draw = drawByRarity(candidates, 0, options.rng, 'fallback')
+    const draw = drawByRarity(candidates, 0, options.rng)
     source = null
     pityTriggered = false
     pityCount = input.pityCount
-    drawnDish = draw.item
+    candidates = [draw.item]
   }
 
-  if (!drawnDish) {
-    throw new Error('未能选出替换菜品')
-  }
-
+  const drawnDish = candidates[0]!
   const usedIds = new Set(
     input.candidate.components.map((component) => component.id),
   )
   const componentId = createComponentId('redraw', drawnDish.id, usedIds)
   const component = createDishComponent(drawnDish, 'redraw', componentId, {
     ingredientById: options.ingredientCatalog,
+    seenDishIds: uniqueIds([...nextSeen, drawnDish.id]),
   })
   const candidate = replaceComponent(
     input.candidate,
@@ -286,6 +310,8 @@ export function redrawComponent(
     tokenCount,
     pityCount,
     pityTriggered,
+    shuffled,
+    singleCandidate: false,
   }
 }
 

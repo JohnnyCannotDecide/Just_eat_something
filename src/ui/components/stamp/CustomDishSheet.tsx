@@ -17,8 +17,8 @@ import type {
 import { COOKING_METHODS, DISH_CATEGORIES } from '@/data/dataRules'
 import type { CustomDishInput } from '@/store/useAppStore'
 
+import { DISH_CATEGORY_EMOJI } from '../../dishEmoji'
 import {
-  DISH_CATEGORY_EMOJI,
   DISH_CATEGORY_LABELS,
   createDishDraftFrom,
   createEmptyDishDraft,

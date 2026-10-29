@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
@@ -31,8 +32,8 @@ const json = execFileSync(
 const data = parseAppDataJson(json, TODAY)
 
 describe('seed-demo-data', () => {
-  it('produces a valid, importable v2 backup under the size limit', () => {
-    expect(data.schemaVersion).toBe(2)
+  it('produces a valid, importable v4 backup under the size limit', () => {
+    expect(data.schemaVersion).toBe(5)
     expect(data.profile).not.toBeNull()
     expect(Buffer.byteLength(json)).toBeLessThan(2 * 1024 * 1024)
     expect(Object.keys(data.days)).toHaveLength(38)
@@ -94,6 +95,18 @@ describe('seed-demo-data', () => {
       grams: 180,
       kcal: 47,
     })
+  })
+
+  it('never touches browser storage and stays in the dev namespace', () => {
+    const source = readFileSync(SCRIPT, 'utf8')
+
+    expect(source).not.toMatch(/\blocalStorage\b/)
+    expect(source).not.toMatch(/\bindexedDB\b/)
+    expect(source).not.toMatch(/\bsessionStorage\b/)
+
+    const namespace = /export const SEED_NAMESPACE = '([^']+)'/.exec(source)
+    expect(namespace?.[1]).toMatch(/^dev_/)
+    expect(source).toContain('导入会覆盖')
   })
 
   it('keeps monthly stamp stats consistent with stamp records', () => {

@@ -12,6 +12,7 @@ import {
   addDishComponent,
   calcComponentCalories,
   calcMealCalories,
+  createCandidateInstanceId,
   createComboCandidate,
   createComponentId,
   createCustomComponent,
@@ -222,6 +223,32 @@ describe('createDishComponent', () => {
 
     expect(component.cooking?.steps).toEqual(['煮一煮'])
   })
+
+  it('seeds seenDishIds with the dish and accepts redraw history', () => {
+    expect(
+      createDishComponent(riceEggDish, 'combo', 'c1').seenDishIds,
+    ).toEqual(['rice_egg'])
+
+    const redrawn = createDishComponent(riceEggDish, 'redraw', 'c2', {
+      seenDishIds: ['egg_only', 'rice_egg', 'egg_only'],
+    })
+    expect(redrawn.seenDishIds).toEqual(['egg_only', 'rice_egg'])
+  })
+})
+
+describe('createCandidateInstanceId', () => {
+  it('uses the combo id first and adds a suffix for repeats', () => {
+    expect(createCandidateInstanceId('combo_a', new Set())).toBe('combo_a')
+    expect(
+      createCandidateInstanceId('combo_a', new Set(['combo_a'])),
+    ).toBe('combo_a#2')
+    expect(
+      createCandidateInstanceId(
+        'combo_a',
+        new Set(['combo_a', 'combo_a#2', 'combo_a#3']),
+      ),
+    ).toBe('combo_a#4')
+  })
 })
 
 describe('createCustomComponent', () => {
@@ -242,6 +269,7 @@ describe('createCustomComponent', () => {
       calories: 800,
       eaten: true,
       discarded: false,
+      seenDishIds: [],
     })
 
     expect(
@@ -280,6 +308,9 @@ describe('createComboCandidate', () => {
     expect(result.id).toBe('combo_a')
     expect(result.comboId).toBe('combo_a')
     expect(result.name).toBe('双蛋套餐')
+    expect(result.nameSource).toBe('auto')
+    expect(result.baseName).toBe('双蛋套餐')
+    expect(result.baseDishIds).toEqual(['rice_egg', 'egg_only', 'rice_egg'])
     expect(result.rarity).toBe('SR')
     expect(result.tip).toBe('吃饱一点')
     expect(result.components.map((component) => component.dishId)).toEqual([
@@ -306,6 +337,7 @@ describe('createComboCandidate', () => {
       ingredients: [],
       grams: null,
       calories: null,
+      seenDishIds: ['missing_dish'],
     })
   })
 })
@@ -325,6 +357,9 @@ describe('legacy candidates', () => {
     expect(result.id).toBe('legacy:2026-10-01:lunch:rice_egg')
     expect(result.comboId).toBeNull()
     expect(result.source).toBe('legacy')
+    expect(result.nameSource).toBe('legacy')
+    expect(result.baseName).toBe('米饭加蛋')
+    expect(result.baseDishIds).toEqual(['rice_egg'])
     expect(result.components).toHaveLength(1)
     expect(result.components[0]).toMatchObject({
       id: 'legacy:2026-10-01:lunch:rice_egg:component',
@@ -344,6 +379,9 @@ describe('legacy candidates', () => {
     })
 
     expect(result.name).toBe('gone')
+    expect(result.nameSource).toBe('legacy')
+    expect(result.baseName).toBe('gone')
+    expect(result.baseDishIds).toEqual(['gone'])
     expect(result.components[0]).toMatchObject({
       dishId: 'gone',
       category: 'snack',
@@ -361,6 +399,10 @@ describe('legacy candidates', () => {
     })
 
     expect(result.id).toBe('legacy:2026-10-01:lunch:custom')
+    expect(result.nameSource).toBe('manual')
+    expect(result.manualName).toBe('聚餐')
+    expect(result.baseName).toBe('聚餐')
+    expect(result.baseDishIds).toEqual([])
     expect(result.components).toHaveLength(1)
     expect(result.components[0]).toMatchObject({
       kind: 'custom',
@@ -377,6 +419,9 @@ describe('legacy candidates', () => {
     })
 
     expect(result.source).toBe('customRecord')
+    expect(result.nameSource).toBe('manual')
+    expect(result.manualName).toBe('夜宵')
+    expect(result.baseDishIds).toEqual([])
     expect(result.components[0]?.kind).toBe('custom')
     expect(result.components[0]?.id).toBe('custom:2026-10-01:lunch:1:component')
   })

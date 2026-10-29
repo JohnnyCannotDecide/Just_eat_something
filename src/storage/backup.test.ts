@@ -44,6 +44,9 @@ function candidate(imageId: string): ComboCandidateSnapshot {
     comboId: null,
     source: 'draw',
     name: '套餐',
+    nameSource: 'legacy',
+    baseName: '套餐',
+    baseDishIds: ['custom_dish:a'],
     rarity: 'R',
     components: [
       {
@@ -62,6 +65,7 @@ function candidate(imageId: string): ComboCandidateSnapshot {
         calories: 120,
         eaten: true,
         discarded: false,
+        seenDishIds: ['custom_dish:a'],
       },
     ],
   }

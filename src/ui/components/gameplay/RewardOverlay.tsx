@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import type { CSSProperties } from 'react'
 
-import { STAMP_TIER_META } from '@/config/gameConfig'
 import { getStampTierLabel } from '@/core/stamps'
 import type { CheckInReceipt } from '@/store/useAppStore'
 
@@ -9,8 +7,9 @@ import {
   stampUpgradeMessage,
   stampUpgradePath,
 } from '../../copy'
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import { formatShortDate } from '../../selectors/todayView'
+import { useReducedMotion } from '../../useReducedMotion'
 import { DishStamp } from '../stamp/DishStamp'
 import { ModalShell } from './ModalShell'
 
@@ -27,25 +26,13 @@ export function RewardOverlay({
 }: RewardOverlayProps) {
   const [index, setIndex] = useState(0)
   const [finished, setFinished] = useState(receipt.stamps.length === 0)
-  const [reduceMotion] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  )
+  const reduceMotion = useReducedMotion()
   const stamp = receipt.stamps[index] ?? null
   const tierLabel = stamp ? getStampTierLabel(stamp.tier) : null
   const previousLabel = stamp?.previousTier
     ? getStampTierLabel(stamp.previousTier)
     : null
   const upgraded = Boolean(stamp?.upgraded && previousLabel)
-  const stampMeta = stamp ? STAMP_TIER_META[stamp.tier] : null
-  const upgradeStyle = stampMeta
-    ? ({
-        '--stamp-color': stampMeta.color,
-        '--stamp-soft': stampMeta.soft,
-      } as CSSProperties)
-    : undefined
   const eaten = receipt.components.filter((component) => component.eaten)
   const tokenText = receipt.tokenRewarded
     ? `🎟️ 抽卡券 +1`
@@ -132,8 +119,10 @@ export function RewardOverlay({
             </p>
           ) : (
             <p className="reward-kcal">
-              <strong>{formatKcal(receipt.calories, showCalories)}</strong>{' '}
-              kcal 已计入今天
+              <strong>
+                {formatKcalWithUnit(receipt.calories, showCalories)}
+              </strong>{' '}
+              已计入今天
             </p>
           )}
 
@@ -165,8 +154,10 @@ export function RewardOverlay({
 
           <p className="reward-name">{stamp.dish.name}</p>
           <p className="reward-kcal">
-            <strong>{formatKcal(receipt.calories, showCalories)}</strong>{' '}
-            kcal 已计入今天
+            <strong>
+              {formatKcalWithUnit(receipt.calories, showCalories)}
+            </strong>{' '}
+            已计入今天
           </p>
 
           {tierLabel && (
@@ -176,7 +167,11 @@ export function RewardOverlay({
           )}
 
           {upgraded && tierLabel && previousLabel && (
-            <p className="reward-upgrade" style={upgradeStyle} role="status">
+            <p
+              className="reward-upgrade"
+              data-tier={stamp?.tier}
+              role="status"
+            >
               <span className="reward-upgrade__spark" aria-hidden="true">
                 ✨
               </span>

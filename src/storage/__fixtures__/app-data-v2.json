@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 2,
+  "profile": {
+    "sex": "female",
+    "age": 30,
+    "heightCm": 165,
+    "weightKg": 60,
+    "activity": "sedentary",
+    "goal": "maintain"
+  },
+  "targetCalories": 1584,
+  "pityCount": 4,
+  "days": {
+    "2026-10-27": {
+      "dateKey": "2026-10-27",
+      "meals": {
+        "breakfast": {
+          "candidateCombos": [],
+          "selectedCandidateId": null,
+          "calories": null,
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false }
+        },
+        "lunch": {
+          "candidateCombos": [
+            {
+              "id": "draw:2026-10-27:lunch:white_rice",
+              "comboId": "combo_white_rice",
+              "source": "draw",
+              "name": "白米饭套餐",
+              "rarity": "R",
+              "components": [
+                {
+                  "id": "draw:2026-10-27:lunch:white_rice:0",
+                  "kind": "dish",
+                  "origin": "combo",
+                  "dishId": "white_rice",
+                  "name": "白米饭",
+                  "category": "staple",
+                  "rarity": "R",
+                  "image": null,
+                  "cooking": null,
+                  "ingredients": [
+                    {
+                      "ingredientId": "cooked_rice",
+                      "name": "米饭",
+                      "kcalPer100g": 116,
+                      "grams": 200
+                    }
+                  ],
+                  "grams": 200,
+                  "calories": 232,
+                  "eaten": true,
+                  "discarded": false
+                }
+              ]
+            }
+          ],
+          "selectedCandidateId": "draw:2026-10-27:lunch:white_rice",
+          "calories": 232,
+          "budget": { "baseUsed": 1, "adUsed": 0, "checkedIn": true }
+        },
+        "dinner": {
+          "candidateCombos": [],
+          "selectedCandidateId": null,
+          "calories": null,
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false }
+        }
+      },
+      "tokens": {
+        "dateKey": "2026-10-27",
+        "count": 1,
+        "customRewardClaimed": false
+      }
+    }
+  },
+  "stamps": {
+    "white_rice": {
+      "checkInCount": 1,
+      "firstCheckInDate": "2026-10-27",
+      "checkInDates": ["2026-10-27"]
+    }
+  },
+  "customIngredients": [],
+  "customDishes": [],
+  "settings": {
+    "showCalories": false,
+    "profileHintDismissed": true
+  }
+}

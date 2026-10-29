@@ -1,7 +1,6 @@
 import { PITY, RARITY_ORDER, RARITY_WEIGHTS } from '@/config/gameConfig'
-import { combos as defaultComboCatalog } from '@/data'
 
-import type { Combo, MealType, Rarity } from './types'
+import type { Rarity } from './types'
 
 export type Rng = () => number
 
@@ -19,14 +18,6 @@ export interface RarityDrawResult<T> {
   item: T
   pityTriggered: boolean
   pityCount: number
-}
-
-/** strict 模式下保底触发但池内没有 SR+ 时抛出，供调用方在消耗次数前处理。 */
-export class PityUnavailableError extends Error {
-  constructor() {
-    super('保底没有可用的 SR+ 候选')
-    this.name = 'PityUnavailableError'
-  }
 }
 
 function normalizeCount(value: number): number {
@@ -66,16 +57,13 @@ function pickBucket<T extends RarityCandidate>(
 
 /**
  * 按稀有度权重抽一个候选。每次成功恰好读取两次 rng：
- * 先稀有度，再同稀有度内的条目。
- *
- * - fallback：保底触发但无 SR+ 时退回普通权重。
- * - strict：保底触发但无 SR+ 时抛 PityUnavailableError。
+ * 先稀有度，再同稀有度内的条目。保底触发但无 SR+ 时退回普通权重，
+ * 保底计数不清零，按普通规则继续累计。
  */
 export function drawByRarity<T extends RarityCandidate>(
   items: readonly T[],
   pityCount: number,
   rng: Rng = Math.random,
-  mode: 'fallback' | 'strict' = 'fallback',
 ): RarityDrawResult<T> {
   const buckets: RarityBucket<T>[] = RARITY_ORDER.map((rarity) => ({
     rarity,
@@ -92,10 +80,6 @@ export function drawByRarity<T extends RarityCandidate>(
   const guaranteedBuckets = buckets.filter((bucket) =>
     isGuaranteedRarity(bucket.rarity),
   )
-
-  if (pityActive && guaranteedBuckets.length === 0 && mode === 'strict') {
-    throw new PityUnavailableError()
-  }
 
   const usePity = pityActive && guaranteedBuckets.length > 0
   const candidates = usePity ? guaranteedBuckets : buckets
@@ -115,57 +99,5 @@ export function drawByRarity<T extends RarityCandidate>(
     item,
     pityTriggered: usePity && hitGuaranteed,
     pityCount: hitGuaranteed ? 0 : normalizedPity + 1,
-  }
-}
-
-export interface ComboDrawState {
-  /** 连续未出 SR+ 的次数；全局计数，跨餐/跨天由调用方持久化。 */
-  pityCount: number
-  /** 当前这一餐已抽到的套餐 id；换餐时重置。 */
-  drawnComboIds: readonly string[]
-}
-
-export interface ComboDrawResult {
-  combo: Combo
-  pityCount: number
-  pityTriggered: boolean
-}
-
-export function createComboDrawState(pityCount = 0): ComboDrawState {
-  return { pityCount: normalizeCount(pityCount), drawnComboIds: [] }
-}
-
-/** 换餐时清空本餐已抽记录，保底进度保留。 */
-export function resetComboDraws(state: ComboDrawState): ComboDrawState {
-  return {
-    pityCount: normalizeCount(state.pityCount),
-    drawnComboIds: [],
-  }
-}
-
-/**
- * 抽一个当前餐次的套餐。同一餐已抽过的套餐不会再次出现；
- * 保底进度跨餐保留，保底触发但无 SR+ 时退回普通权重。
- */
-export function drawCombo(
-  state: ComboDrawState,
-  meal: MealType,
-  rng: Rng = Math.random,
-  catalog: readonly Combo[] = defaultComboCatalog,
-): ComboDrawResult {
-  const drawn = new Set(state.drawnComboIds)
-  const candidates = catalog.filter(
-    (combo) => combo.meals.includes(meal) && !drawn.has(combo.id),
-  )
-
-  if (candidates.length === 0) {
-    throw new Error('候选套餐已抽完，无法继续抽卡')
-  }
-
-  const draw = drawByRarity(candidates, state.pityCount, rng, 'fallback')
-  return {
-    combo: draw.item,
-    pityCount: draw.pityCount,
-    pityTriggered: draw.pityTriggered,
   }
 }

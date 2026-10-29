@@ -7,17 +7,23 @@ import {
   CALORIE_SAFETY_FLOOR,
   DRAW_LIMITS,
   DRAW_SOURCE_ORDER,
+  adExtraDrawsPerMeal,
   GOAL_ADJUSTMENTS,
+  DEFAULT_THEME,
   GOAL_META,
   MEALS,
   PITY,
+  RARITY_META,
   RARITY_WEIGHTS,
   STAMP_DISPLAY,
   STAMP_TIERS,
   STAMP_TIER_META,
+  THEME_IDS,
   TOKEN_REWARDS,
   componentRedrawCostsDraw,
   customDishAllowedRarities,
+  isThemeName,
+  mealKcalRange,
 } from './gameConfig'
 
 describe('gameConfig', () => {
@@ -31,12 +37,20 @@ describe('gameConfig', () => {
     expect(PITY.missThreshold).toBe(5)
     expect(PITY.guaranteedRarities).toEqual(['SR', 'SSR', 'UR'])
     expect(DRAW_LIMITS.basePerMeal).toBe(2)
-    expect(DRAW_LIMITS.adBonusPerMeal).toBe(3)
     expect(DRAW_LIMITS.tokenValidDays).toBe(1)
+    expect(adExtraDrawsPerMeal).toBeNull()
     expect(DRAW_SOURCE_ORDER).toEqual(['base', 'token', 'ad'])
     expect(TOKEN_REWARDS.formalDish).toBe(1)
     expect(TOKEN_REWARDS.customRecordFirstPerDay).toBe(1)
     expect(AD.mockCountdownSeconds).toBe(5)
+  })
+
+  it('keeps meal calorie ranges in spec', () => {
+    expect(mealKcalRange).toEqual({
+      breakfast: { min: 250, max: 600 },
+      lunch: { min: 500, max: 900 },
+      dinner: { min: 350, max: 800 },
+    })
   })
 
   it('keeps combo component rules configurable', () => {
@@ -56,10 +70,24 @@ describe('gameConfig', () => {
   it('provides complete goal and stamp-tier display meta', () => {
     expect(Object.keys(GOAL_META)).toEqual(['cut', 'maintain', 'gain'])
     expect(Object.keys(STAMP_TIER_META)).toEqual(['bronze', 'silver', 'gold'])
+    // 颜色交给主题令牌，元数据只保留等级文案字段。
     for (const meta of Object.values(STAMP_TIER_META)) {
-      expect(meta.color).toMatch(/^#[0-9A-Fa-f]{6}$/)
-      expect(meta.soft).toMatch(/^#[0-9A-Fa-f]{6}$/)
+      expect(Object.keys(meta)).toEqual(['tier'])
     }
+    for (const meta of Object.values(RARITY_META)) {
+      expect(Object.keys(meta)).toEqual(['label'])
+    }
+  })
+
+  it('exposes exactly the three supported themes with cute as default', () => {
+    expect(THEME_IDS).toEqual(['simple', 'cute', 'vivid'])
+    expect(DEFAULT_THEME).toBe('cute')
+    for (const theme of THEME_IDS) {
+      expect(isThemeName(theme)).toBe(true)
+    }
+    expect(isThemeName('midnight')).toBe(false)
+    expect(isThemeName(undefined)).toBe(false)
+    expect(isThemeName(3)).toBe(false)
   })
 
   it('keeps calorie safety floors and goal adjustments', () => {

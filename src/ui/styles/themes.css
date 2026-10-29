@@ -1,0 +1,36 @@
+/*
+ * 主题结构差异。颜色/圆角/阴影本身都在 tokens.css 里；
+ * 这里只放无法用单个变量表达的装饰开关。
+ */
+
+/* simple：去掉胶带、手绘装饰和纸张纹理 */
+[data-theme='simple'] .today-sticker::before,
+[data-theme='simple'] .bento__tape {
+  display: none;
+}
+
+[data-theme='simple'] .bento-cell,
+[data-theme='simple'] .meal-ticket,
+[data-theme='simple'] .stamp-book-card {
+  border: 1px solid var(--line);
+}
+
+/* vivid：卡片材质——细霓虹描边 + 轻微内高光，不改变布局 */
+[data-theme='vivid'] .meal-ticket,
+[data-theme='vivid'] .stamp-book-card,
+[data-theme='vivid'] .bento-cell,
+[data-theme='vivid'] .calendar-cell,
+[data-theme='vivid'] .draw-card,
+[data-theme='vivid'] .ad-modal {
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme='vivid'] img {
+  filter: saturate(1.08) contrast(1.02);
+}
+
+[data-theme='vivid'] ::selection {
+  background: var(--accent-line);
+  color: var(--text-on-accent);
+}

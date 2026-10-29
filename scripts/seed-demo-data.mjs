@@ -2,7 +2,7 @@
 /**
  * 仅开发环境使用的演示数据生成器。
  *
- * 生成一个可以直接导入应用（设置 → 导入备份）的 schemaVersion = 2 JSON：
+ * 生成一个可以直接导入应用（设置 → 导入备份）的 schemaVersion = 5 JSON：
  * 最近 N 天（默认 45 天）的三餐快照、印章与档案。
  *
  * 只依赖 Node 内置模块；不导入 src，构建产物也不会包含它。
@@ -28,6 +28,15 @@ const DEFAULTS = {
   out: '.local/seed-demo-data.json',
   stdout: false,
 }
+
+/**
+ * 演示数据只属于开发环境。脚本本身不写浏览器存储（只输出文件），
+ * 这个命名空间用于标记来源，避免被误当成正式数据。
+ */
+export const SEED_NAMESPACE = 'dev_diet-diary:'
+
+const SEED_WARNING =
+  '仅开发用：导入会覆盖应用里的当前数据（导入前会自动创建快照）。\n'
 
 function readJson(relativePath) {
   return JSON.parse(
@@ -272,6 +281,9 @@ function buildCandidate(combo, dateKey, meal, rng, options = {}) {
     comboId: combo.id,
     source: 'draw',
     name: combo.name,
+    nameSource: 'auto',
+    baseName: combo.name,
+    baseDishIds: [...combo.components],
     rarity: resolveComboRarity(combo),
     ...(combo.tip ? { tip: combo.tip } : {}),
     components,
@@ -319,6 +331,10 @@ function customOnlyMeal(dateKey, meal, name, calories) {
     comboId: null,
     source: 'customRecord',
     name,
+    nameSource: 'manual',
+    manualName: name,
+    baseName: name,
+    baseDishIds: [],
     rarity: 'R',
     components: [
       buildCustomComponent(
@@ -478,7 +494,7 @@ export function buildSeedData({
   }
 
   return {
-    schemaVersion: 2,
+    schemaVersion: 5,
     profile: {
       sex: 'female',
       age: 30,
@@ -494,6 +510,7 @@ export function buildSeedData({
     settings: {
       showCalories: true,
       profileHintDismissed: true,
+      theme: 'cute',
     },
   }
 }
@@ -565,7 +582,7 @@ function main() {
   if (options.stdout) {
     process.stdout.write(json)
     process.stderr.write(
-      `已生成 ${Object.keys(data.days).length} 天演示数据（stdout）\n`,
+      `已生成 ${Object.keys(data.days).length} 天演示数据（stdout，${SEED_NAMESPACE}）\n${SEED_WARNING}`,
     )
     return
   }
@@ -578,14 +595,15 @@ function main() {
   const sizeKb = Math.ceil(Buffer.byteLength(json) / 1024)
   process.stderr.write(
     [
-      `已生成 ${Object.keys(data.days).length} 天演示数据（${sizeKb} KB）`,
+      SEED_WARNING.trimEnd(),
+      `已生成 ${Object.keys(data.days).length} 天演示数据（${sizeKb} KB，${SEED_NAMESPACE}）`,
       `输出：${outPath}`,
       '',
       '导入方式：',
       '  1. 打开应用 → 设置 → 导入备份',
-      '  2. 选择上面的 JSON 文件（会覆盖当前数据，建议先导出备份）',
+      '  2. 选择上面的 JSON 文件（会先出现覆盖确认并自动快照）',
       '  3. 进入「日历」Tab，切换月份查看最近 45 天',
-      '清空演示数据：设置 → 清空数据',
+      '清空演示数据：设置 → 清空数据（同样会自动快照）',
       '',
     ].join('\n'),
   )

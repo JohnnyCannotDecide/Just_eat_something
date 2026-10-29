@@ -3,7 +3,7 @@
   "combos": [
     {
       "id": "b_soy_youtiao",
-      "name": "豆浆油条套餐",
+      "name": "油条豆浆早安",
       "meals": [
         "breakfast"
       ],
@@ -15,7 +15,7 @@
     },
     {
       "id": "b_porridge_egg",
-      "name": "白粥小菜套餐",
+      "name": "白粥小菜慢慢吃",
       "meals": [
         "breakfast"
       ],
@@ -28,7 +28,7 @@
     },
     {
       "id": "b_century_porridge",
-      "name": "皮蛋瘦肉粥套餐",
+      "name": "皮蛋粥暖暖胃",
       "meals": [
         "breakfast"
       ],
@@ -40,7 +40,7 @@
     },
     {
       "id": "b_egg_pancake",
-      "name": "鸡蛋饼牛奶套餐",
+      "name": "蛋饼果香出发",
       "meals": [
         "breakfast"
       ],
@@ -53,7 +53,7 @@
     },
     {
       "id": "b_xiaolongbao",
-      "name": "小笼包豆腐脑套餐",
+      "name": "小笼豆腐脑",
       "meals": [
         "breakfast"
       ],
@@ -64,7 +64,7 @@
     },
     {
       "id": "b_dumplings",
-      "name": "蒸饺豆浆套餐",
+      "name": "蒸饺豆浆碰杯",
       "meals": [
         "breakfast"
       ],
@@ -75,7 +75,7 @@
     },
     {
       "id": "b_wonton",
-      "name": "馄饨南瓜套餐",
+      "name": "馄饨南瓜暖场",
       "meals": [
         "breakfast"
       ],
@@ -86,7 +86,7 @@
     },
     {
       "id": "b_oat_yogurt",
-      "name": "燕麦酸奶杯套餐",
+      "name": "燕麦酸奶三重奏",
       "meals": [
         "breakfast"
       ],
@@ -98,7 +98,7 @@
     },
     {
       "id": "b_toast",
-      "name": "吐司双拼套餐",
+      "name": "吐司双拼好心情",
       "meals": [
         "breakfast"
       ],
@@ -110,7 +110,7 @@
     },
     {
       "id": "b_chicken_porridge",
-      "name": "鸡肉粥配芋头",
+      "name": "鸡粥芋头早安",
       "meals": [
         "breakfast"
       ],
@@ -121,7 +121,7 @@
     },
     {
       "id": "b_salmon_riceball",
-      "name": "三文鱼饭团酸奶",
+      "name": "饭团酸奶出发",
       "meals": [
         "breakfast"
       ],
@@ -132,7 +132,7 @@
     },
     {
       "id": "l_tomato_egg",
-      "name": "番茄炒蛋盖饭",
+      "name": "番茄炒蛋盖个饭",
       "meals": [
         "lunch"
       ],
@@ -144,7 +144,7 @@
     },
     {
       "id": "l_chicken_salad",
-      "name": "鸡胸肉沙拉套餐",
+      "name": "鸡胸沙拉清清爽",
       "meals": [
         "lunch"
       ],
@@ -155,7 +155,7 @@
     },
     {
       "id": "l_mushroom_cabbage",
-      "name": "香菇圆白菜套餐",
+      "name": "圆白菜配宫保鸡",
       "meals": [
         "lunch"
       ],
@@ -167,7 +167,7 @@
     },
     {
       "id": "l_shrimp_egg",
-      "name": "虾仁蒸蛋套餐",
+      "name": "虾仁蒸蛋盖饭",
       "meals": [
         "lunch"
       ],
@@ -179,7 +179,7 @@
     },
     {
       "id": "l_beef_veg_rice",
-      "name": "牛肉杂蔬饭套餐",
+      "name": "牛肉杂蔬饭饱饱",
       "meals": [
         "lunch"
       ],
@@ -190,7 +190,7 @@
     },
     {
       "id": "l_tofu_pot",
-      "name": "豆腐蔬菜煲套餐",
+      "name": "豆腐煲配黄瓜",
       "meals": [
         "lunch"
       ],
@@ -202,7 +202,7 @@
     },
     {
       "id": "l_corn_chicken",
-      "name": "玉米鸡丁套餐",
+      "name": "玉米鸡丁香香",
       "meals": [
         "lunch"
       ],
@@ -214,7 +214,7 @@
     },
     {
       "id": "l_enoki_beef",
-      "name": "金针菇牛肉卷套餐",
+      "name": "金针菇卷牛肉",
       "meals": [
         "lunch"
       ],
@@ -225,7 +225,7 @@
     },
     {
       "id": "l_teriyaki",
-      "name": "照烧鸡腿饭套餐",
+      "name": "照烧鸡腿饭香",
       "meals": [
         "lunch"
       ],
@@ -247,7 +247,7 @@
     },
     {
       "id": "l_hot_sour_noodles",
-      "name": "酸辣粉套餐",
+      "name": "酸辣粉小馆",
       "meals": [
         "lunch"
       ],
@@ -269,7 +269,7 @@
     },
     {
       "id": "d_tomato_brisket",
-      "name": "番茄牛腩面套餐",
+      "name": "番茄牛腩夜面",
       "meals": [
         "dinner"
       ],
@@ -280,7 +280,7 @@
     },
     {
       "id": "d_salmon_avocado",
-      "name": "三文鱼牛油果饭套餐",
+      "name": "三文鱼牛油果饭",
       "meals": [
         "dinner"
       ],
@@ -291,7 +291,7 @@
     },
     {
       "id": "d_shrimp_egg_rice",
-      "name": "虾仁滑蛋饭套餐",
+      "name": "虾仁滑蛋盖饭",
       "meals": [
         "dinner"
       ],
@@ -302,7 +302,7 @@
     },
     {
       "id": "d_cod",
-      "name": "香煎鳕鱼套餐",
+      "name": "香煎鳕鱼晚餐",
       "meals": [
         "dinner"
       ],
@@ -314,7 +314,7 @@
     },
     {
       "id": "d_mapo_tofu",
-      "name": "麻婆豆腐盖饭套餐",
+      "name": "麻婆豆腐盖饭",
       "meals": [
         "dinner"
       ],
@@ -325,7 +325,7 @@
     },
     {
       "id": "d_beef_pepper",
-      "name": "牛肉彩椒糙米饭套餐",
+      "name": "牛肉彩椒糙米饭",
       "meals": [
         "dinner"
       ],
@@ -336,7 +336,7 @@
     },
     {
       "id": "d_pumpkin_chicken",
-      "name": "南瓜鸡肉焖饭套餐",
+      "name": "南瓜鸡肉焖饭",
       "meals": [
         "dinner"
       ],
@@ -347,7 +347,7 @@
     },
     {
       "id": "d_braised_beef",
-      "name": "红烧牛肉面套餐",
+      "name": "红烧牛肉夜面",
       "meals": [
         "dinner"
       ],
@@ -358,7 +358,7 @@
     },
     {
       "id": "d_sweet_sour_pork",
-      "name": "糖醋里脊套餐",
+      "name": "糖醋里脊盖饭",
       "meals": [
         "dinner"
       ],
@@ -370,7 +370,7 @@
     },
     {
       "id": "d_steamed_sea_bass",
-      "name": "清蒸鲈鱼套餐",
+      "name": "清蒸鲈鱼晚餐",
       "meals": [
         "dinner"
       ],
@@ -382,7 +382,7 @@
     },
     {
       "id": "d_winter_melon_soup",
-      "name": "冬瓜排骨汤套餐",
+      "name": "冬瓜排骨汤饭",
       "meals": [
         "dinner"
       ],
@@ -394,7 +394,7 @@
     },
     {
       "id": "d_egg_fried_rice",
-      "name": "蛋炒饭配番茄蛋汤",
+      "name": "蛋炒饭番茄汤",
       "meals": [
         "dinner"
       ],
@@ -416,7 +416,7 @@
     },
     {
       "id": "d_plain_noodles",
-      "name": "清汤面配番茄蛋汤",
+      "name": "清汤面番茄汤",
       "meals": [
         "dinner"
       ],
@@ -427,7 +427,7 @@
     },
     {
       "id": "d_burger",
-      "name": "芝士汉堡套餐",
+      "name": "芝士汉堡派对",
       "meals": [
         "dinner"
       ],
@@ -438,7 +438,7 @@
     },
     {
       "id": "d_icecream",
-      "name": "冰淇淋甜点",
+      "name": "冰淇淋香蕉船",
       "meals": [
         "dinner"
       ],
@@ -449,13 +449,335 @@
     },
     {
       "id": "d_fried_chicken",
-      "name": "深夜炸鸡拼盘",
+      "name": "炸鸡欢乐拼",
       "meals": [
         "dinner"
       ],
       "components": [
         "fried_chicken_platter",
         "cucumber_salad"
+      ]
+    },
+    {
+      "id": "nb_changfen_soy",
+      "name": "肠粉豆浆滑滑",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "rice_roll",
+        "soy_milk"
+      ]
+    },
+    {
+      "id": "nb_charsiu_bun_soy",
+      "name": "叉烧包配豆浆",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "char_siu_bun",
+        "soy_milk"
+      ]
+    },
+    {
+      "id": "nb_meat_bun_soy",
+      "name": "大肉包豆浆局",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "big_meat_bun",
+        "soy_milk"
+      ]
+    },
+    {
+      "id": "nb_cake_toast",
+      "name": "蛋糕吐司甜甜",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "cake",
+        "whole_wheat_toast",
+        "milk"
+      ]
+    },
+    {
+      "id": "nb_tart_toast_soy",
+      "name": "蛋挞吐司早安",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "egg_tart",
+        "whole_wheat_toast",
+        "soy_milk"
+      ]
+    },
+    {
+      "id": "nb_taro_toast",
+      "name": "芋泥吐司软软",
+      "meals": [
+        "breakfast"
+      ],
+      "components": [
+        "taro_milk",
+        "whole_wheat_toast"
+      ]
+    },
+    {
+      "id": "nl_zucchini_egg_rice",
+      "name": "西葫芦炒蛋饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "zucchini_egg",
+        "white_rice",
+        "corn_rib_soup"
+      ]
+    },
+    {
+      "id": "nl_loofah_ball_rice",
+      "name": "水瓜牛筋丸饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "loofah_beef_ball",
+        "white_rice",
+        "snow_pea"
+      ]
+    },
+    {
+      "id": "nl_eggplant_fish_rice",
+      "name": "茄子鱼片盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "eggplant_pot",
+        "white_rice",
+        "spicy_fish_slices"
+      ]
+    },
+    {
+      "id": "nl_cola_wings_rice",
+      "name": "可乐鸡翅盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "cola_chicken_wings",
+        "white_rice",
+        "oyster_lettuce"
+      ]
+    },
+    {
+      "id": "nl_wood_ear_beef_rice",
+      "name": "木耳炒蛋牛肉饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "wood_ear_egg",
+        "white_rice",
+        "celery_beef"
+      ]
+    },
+    {
+      "id": "nl_tomato_brisket_rice",
+      "name": "番茄牛腩饭满足",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "tomato_brisket",
+        "white_rice"
+      ]
+    },
+    {
+      "id": "nl_mushroom_wings_rice",
+      "name": "口蘑鸡翅盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "button_mushroom_wings",
+        "white_rice",
+        "loofah_soup"
+      ]
+    },
+    {
+      "id": "nl_trotter_rice",
+      "name": "红烧猪蹄饭香",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "braised_pork_trotter",
+        "white_rice"
+      ]
+    },
+    {
+      "id": "nl_sweet_sour_ribs_yam",
+      "name": "糖醋排骨山药",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "sweet_sour_ribs",
+        "steamed_yam"
+      ]
+    },
+    {
+      "id": "nl_corn_shrimp_rice",
+      "name": "玉米虾饼盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "corn_shrimp_cake",
+        "white_rice",
+        "snow_pea"
+      ]
+    },
+    {
+      "id": "nl_yuxiang_rice",
+      "name": "鱼香肉丝盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "yu_xiang_pork",
+        "white_rice",
+        "tofu_seafood_soup"
+      ]
+    },
+    {
+      "id": "nl_salt_pepper_wings_rice",
+      "name": "椒盐鸡翅盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "salt_pepper_wings",
+        "white_rice"
+      ]
+    },
+    {
+      "id": "nl_scallion_chicken_rice",
+      "name": "葱油焖鸡盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "scallion_braised_chicken",
+        "white_rice",
+        "braised_winter_melon"
+      ]
+    },
+    {
+      "id": "nl_garlic_ribs_yam",
+      "name": "蒜香排骨山药",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "garlic_ribs",
+        "steamed_yam"
+      ]
+    },
+    {
+      "id": "nl_spicy_burger",
+      "name": "香辣鸡腿堡堡",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "spicy_chicken_burger",
+        "snow_pea"
+      ]
+    },
+    {
+      "id": "nl_orleans_burger",
+      "name": "奥尔良鸡腿堡",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "orleans_chicken_burger",
+        "snow_pea"
+      ]
+    },
+    {
+      "id": "nl_pork_rice_flour_yam",
+      "name": "粉蒸肉配山药",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "steamed_pork_rice_flour",
+        "steamed_yam"
+      ]
+    },
+    {
+      "id": "nl_chili_pork_rice",
+      "name": "辣椒炒肉盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "chili_pork",
+        "white_rice",
+        "loofah_soup"
+      ]
+    },
+    {
+      "id": "nl_mushroom_pork_rice",
+      "name": "香菇炒肉盖饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "mushroom_pork",
+        "white_rice",
+        "loofah_soup"
+      ]
+    },
+    {
+      "id": "nl_wuzhimaotao_chicken_rice",
+      "name": "五指毛桃鸡饭",
+      "meals": [
+        "lunch"
+      ],
+      "components": [
+        "wuzhimaotao_chicken_soup",
+        "white_rice",
+        "mushroom_pork"
+      ]
+    },
+    {
+      "id": "d_light_salad",
+      "name": "晚风鸡胸沙拉",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "chicken_salad",
+        "garlic_greens"
+      ]
+    },
+    {
+      "id": "d_light_soup",
+      "name": "冬瓜汤青菜",
+      "meals": [
+        "dinner"
+      ],
+      "components": [
+        "winter_melon_ribs_soup",
+        "garlic_greens"
       ]
     }
   ]

@@ -1,5 +1,6 @@
 import { RARITY_ORDER } from '@/config/gameConfig'
 import type {
+  Combo,
   CookingMethod,
   Dish,
   DishCategory,
@@ -48,7 +49,7 @@ export const COOKING_TIME_MAX_MINUTES = 300
 
 export const COMBO_COMPONENT_MIN = 1
 export const COMBO_COMPONENT_MAX = 4
-export const MIN_COMBOS_PER_MEAL = 8
+export const MIN_COMBOS_PER_MEAL = 12
 export const MAX_UR_COMBOS = 3
 
 /** 肉、蛋、海鲜，以及含肉馅的半成品都需要“熟透”提示。 */
@@ -70,6 +71,11 @@ export const HEAT_THROUGH_INGREDIENT_IDS: ReadonlySet<string> = new Set([
   'xiaolongbao',
   'dumpling',
   'wonton',
+  'chicken_wing',
+  'beef_tendon_ball',
+  'char_siu',
+  'pork_trotter',
+  'pork_belly',
 ])
 
 const DISH_CATEGORY_SET: ReadonlySet<string> = new Set(DISH_CATEGORIES)
@@ -96,6 +102,38 @@ export function countUnicodeChars(value: string): number {
 export function requiresHeatThroughHint(dish: Dish): boolean {
   return dish.ingredients.some(({ ingredientId }) =>
     HEAT_THROUGH_INGREDIENT_IDS.has(ingredientId),
+  )
+}
+
+export function isBreakfastOnly(dish: Pick<Dish, 'meals'>): boolean {
+  return dish.meals.length === 1 && dish.meals[0] === 'breakfast'
+}
+
+/** 水果、甜点、饮品不能作为单部件套餐的唯一内容。 */
+export function isSideOnlyCategory(category: DishCategory): boolean {
+  return category === 'fruit' || category === 'drink' || category === 'snack'
+}
+
+export function comboProvides(
+  combo: Pick<Combo, 'components'>,
+  dishById: ReadonlyMap<string, Dish>,
+  flag: 'providesStaple' | 'providesProtein',
+): boolean {
+  return combo.components.some(
+    (dishId) => dishById.get(dishId)?.[flag] === true,
+  )
+}
+
+/** 与 gameFlow.redrawComponent 的候选过滤保持一致。 */
+export function isRedrawCandidate(
+  dish: Pick<Dish, 'meals' | 'category' | 'rarity'>,
+  meal: MealType,
+  category: DishCategory,
+): boolean {
+  return (
+    dish.meals.includes(meal) &&
+    dish.category === category &&
+    dish.rarity !== 'UR'
   )
 }
 

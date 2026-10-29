@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { IndexedDbImageStore } from './IndexedDbImageStore'
+import { TEST_IMAGE_DB_NAME } from './namespaces'
 
 let dbCounter = 0
 
-// 每个用例独立数据库，避免相互影响。
+// 每个用例独立数据库，避免相互影响；名字带 test_ 命名空间。
 function createStore(): IndexedDbImageStore {
   dbCounter += 1
-  return new IndexedDbImageStore(globalThis.indexedDB, `test-images-${dbCounter}`)
+  return new IndexedDbImageStore(
+    globalThis.indexedDB,
+    `${TEST_IMAGE_DB_NAME}-${dbCounter}`,
+  )
 }
 
 const image = {
@@ -46,6 +50,65 @@ describe('IndexedDbImageStore', () => {
     await expect(store.getImage('img:missing')).resolves.toBeNull()
   })
 
+  it('lists all images with their business keys', async () => {
+    const store = createStore()
+    await store.putImage('img:a', image)
+    await store.putImage('img:b', {
+      mime: 'image/png',
+      bytes: new Uint8Array([5]),
+    })
+
+    const entries = await store.listImages()
+
+    expect(
+      entries
+        .map((entry) => [entry.imageId, entry.mime])
+        .sort((left, right) => left[0]!.localeCompare(right[0]!)),
+    ).toEqual([
+      ['img:a', 'image/webp'],
+      ['img:b', 'image/png'],
+    ])
+  })
+
+  it('batch-writes images without clearing existing ones', async () => {
+    const store = createStore()
+    await store.putImage('img:old', image)
+
+    await store.putImages([
+      { imageId: 'img:a', ...image },
+      {
+        imageId: 'img:b',
+        mime: 'image/png',
+        bytes: new Uint8Array([7]),
+      },
+    ])
+
+    await expect(store.getImage('img:old')).resolves.not.toBeNull()
+    await expect(store.getImage('img:a')).resolves.not.toBeNull()
+    await expect(store.getImage('img:b')).resolves.not.toBeNull()
+  })
+
+  it('aborts the whole batch when one entry cannot be written', async () => {
+    const store = createStore()
+    await store.putImage('img:old', image)
+
+    await expect(
+      store.putImages([
+        { imageId: 'img:a', ...image },
+        {
+          imageId: 'img:b',
+          // 不可被结构化克隆，写入时抛错。
+          mime: (() => undefined) as never,
+          bytes: new Uint8Array([7]),
+        },
+      ]),
+    ).rejects.toThrow('图片保存失败')
+
+    await expect(store.getImage('img:a')).resolves.toBeNull()
+    // 已有的图片不受影响。
+    await expect(store.getImage('img:old')).resolves.not.toBeNull()
+  })
+
   it('deletes a single image', async () => {
     const store = createStore()
     await store.putImage('img:a', image)
@@ -70,7 +133,10 @@ describe('IndexedDbImageStore', () => {
         throw new Error('blocked')
       },
     } as unknown as IDBFactory
-    const store = new IndexedDbImageStore(broken, 'test-images-broken')
+    const store = new IndexedDbImageStore(
+      broken,
+      `${TEST_IMAGE_DB_NAME}-broken`,
+    )
 
     await expect(store.getImage('img:a')).rejects.toThrow('图片存储不可用')
   })

@@ -56,6 +56,9 @@ export interface Dish {
   rarity: Rarity
   category: DishCategory
   meals: MealType[]
+  /** 官方菜必须显式声明；用来校验午餐是否同时有主食和蛋白质。 */
+  providesStaple?: boolean
+  providesProtein?: boolean
   ingredients: DishIngredient[]
   /** 官方菜的图片路径；自制菜为空字符串，改用 imageId / emoji。 */
   image: string
@@ -166,13 +169,25 @@ export interface MealComponentSnapshot {
   eaten: boolean
   /** 已舍弃：保留快照供展示/撤销，但不参与结算。 */
   discarded: boolean
+  /** 该部件槽位本轮出现过的 dishId；自定义部件为空。 */
+  seenDishIds?: string[]
 }
+
+export type ComboNameSource = 'auto' | 'manual' | 'legacy'
 
 export interface ComboCandidateSnapshot {
   id: string
   comboId: string | null
   source: ComboSource
   name: string
+  /** 名字来源；老数据缺失时按 legacy 处理。 */
+  nameSource?: ComboNameSource
+  /** 用户手动改的名字；存在时优先且不再自动变化。 */
+  manualName?: string
+  /** 抽到/迁移时的原始套餐名，用于恢复原组合。 */
+  baseName?: string
+  /** 抽到/迁移时的原始菜品 id，用于判断是否恢复原组合。 */
+  baseDishIds?: string[]
   rarity: Rarity
   tip?: string
   components: MealComponentSnapshot[]

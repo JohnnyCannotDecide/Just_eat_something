@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="cute">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -12,9 +12,33 @@
     <meta name="color-scheme" content="light" />
     <meta
       name="description"
-      content="每日三餐抽卡决定吃什么，打卡收集 60 道可爱菜品印章。"
+      content="每日三餐抽卡决定吃什么，打卡收集 94 道可爱菜品印章。"
     />
     <meta name="theme-color" content="#FFF6E8" />
+    <script>
+      // 首屏前同步主题，避免深色主题闪白。key 与 PROD_STORAGE_PREFIX 对齐。
+      ;(function () {
+        try {
+          var raw = localStorage.getItem('diet-diary:app-data')
+          if (!raw) return
+          var theme = JSON.parse(raw).settings.theme
+          var themes = {
+            simple: ['#F4F6F8', 'light'],
+            cute: ['#FFF6E8', 'light'],
+            vivid: ['#150D24', 'dark'],
+          }
+          var picked = themes[theme]
+          if (!picked) return
+          document.documentElement.dataset.theme = theme
+          var themeMeta = document.querySelector('meta[name="theme-color"]')
+          if (themeMeta) themeMeta.content = picked[0]
+          var schemeMeta = document.querySelector('meta[name="color-scheme"]')
+          if (schemeMeta) schemeMeta.content = picked[1]
+        } catch (error) {
+          // 解析失败时保持默认 cute。
+        }
+      })()
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="便当手帐" />

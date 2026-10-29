@@ -6,7 +6,7 @@ import dishesJson from './dishes.json'
 import ingredientsJson from './ingredients.json'
 import { dishById, dishes, ingredientById, ingredients } from './index'
 
-const RARITY_COUNTS = { R: 29, SR: 19, SSR: 9, UR: 3 } as const
+const RARITY_COUNTS = { R: 44, SR: 35, SSR: 12, UR: 3 } as const
 
 const TOP_LEVEL_DISH_KEYS = ['_comment', 'dishes']
 const TOP_LEVEL_INGREDIENT_KEYS = ['_comment', 'ingredients']
@@ -16,6 +16,8 @@ const DISH_KEYS = new Set([
   'rarity',
   'category',
   'meals',
+  'providesStaple',
+  'providesProtein',
   'ingredients',
   'image',
   'stampImage',
@@ -28,6 +30,8 @@ const REQUIRED_DISH_KEYS = [
   'rarity',
   'category',
   'meals',
+  'providesStaple',
+  'providesProtein',
   'ingredients',
   'image',
   'cooking',
@@ -36,9 +40,16 @@ const INGREDIENT_KEYS = ['id', 'kcalPer100g', 'name']
 const DISH_INGREDIENT_KEYS = ['grams', 'ingredientId']
 
 describe('data integrity', () => {
-  it('has 60 dishes and 66 ingredients', () => {
-    expect(dishes).toHaveLength(60)
-    expect(ingredients).toHaveLength(66)
+  it('has 94 dishes and 86 ingredients', () => {
+    expect(dishes).toHaveLength(94)
+    expect(ingredients).toHaveLength(86)
+  })
+
+  it('declares both provides flags explicitly on every official dish', () => {
+    for (const dish of dishes) {
+      expect(typeof dish.providesStaple, dish.id).toBe('boolean')
+      expect(typeof dish.providesProtein, dish.id).toBe('boolean')
+    }
   })
 
   it('matches the rarity distribution', () => {

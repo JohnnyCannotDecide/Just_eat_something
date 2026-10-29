@@ -11,6 +11,7 @@ import type {
 import { customDishAllowedRarities } from '@/config/gameConfig'
 import { countUnicodeChars } from '@/data/dataRules'
 
+import { DISH_CATEGORY_EMOJI } from '../dishEmoji'
 import type { ProcessedImage } from '../images/processImageFile'
 
 export const DISH_CATEGORY_LABELS: Record<DishCategory, string> = {
@@ -21,17 +22,6 @@ export const DISH_CATEGORY_LABELS: Record<DishCategory, string> = {
   veg: '蔬菜',
   fruit: '水果',
   snack: '小食',
-}
-
-/** 没上传图片时按分类给一个默认图标，用户仍可改。 */
-export const DISH_CATEGORY_EMOJI: Record<DishCategory, string> = {
-  staple: '🍚',
-  main: '🍲',
-  soup: '🥣',
-  drink: '🥛',
-  veg: '🥬',
-  fruit: '🍎',
-  snack: '🍪',
 }
 
 export interface CustomDishFormRow {

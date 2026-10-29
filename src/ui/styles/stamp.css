@@ -2,6 +2,8 @@
 
 .dish-stamp {
   --stamp-size: 88px;
+  --stamp-ring: var(--stamp-color, var(--stamp-neutral));
+  --stamp-ring-soft: var(--stamp-soft, var(--stamp-neutral-soft));
   position: relative;
   display: inline-grid;
   flex: none;
@@ -9,10 +11,69 @@
   height: var(--stamp-size);
   place-items: center;
   transform: rotate(var(--stamp-tilt, 0deg));
-  filter: drop-shadow(0 5px 9px rgba(107, 72, 42, 0.18));
+  filter: var(--drop-shadow-card);
   line-height: 1;
   -webkit-user-select: none;
   user-select: none;
+}
+
+.dish-stamp__ring {
+  fill: var(--stamp-ring-soft);
+  stroke: var(--stamp-ring);
+}
+
+.dish-stamp__rings,
+.dish-stamp__art-ring {
+  fill: none;
+  stroke: var(--stamp-ring);
+}
+
+.dish-stamp__ticks path {
+  fill: none;
+  stroke: var(--stamp-ring);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.dish-stamp__grain {
+  fill: var(--stamp-ring);
+}
+
+.dish-stamp__grain-ink {
+  fill: var(--ink-line-strong);
+}
+
+.dish-stamp__backdrop {
+  fill: var(--surface-bright);
+}
+
+.dish-stamp--silhouette .dish-stamp__backdrop {
+  fill: var(--surface-muted-5);
+}
+
+.dish-stamp__locked-art {
+  fill: var(--text-disabled);
+  stroke: var(--text-disabled);
+}
+
+.dish-stamp__rarity-badge {
+  fill: var(--rarity-color);
+}
+
+.dish-stamp__rarity {
+  fill: var(--text-on-rarity);
+}
+
+.dish-stamp__count-bg {
+  fill: var(--stamp-ring);
+}
+
+.dish-stamp__count {
+  fill: var(--stamp-on-ring);
+}
+
+.dish-stamp__date {
+  fill: var(--stamp-ring);
 }
 
 .dish-stamp svg {
@@ -24,53 +85,62 @@
 
 .dish-stamp--sm {
   --stamp-size: 62px;
-  filter: drop-shadow(0 2px 4px rgba(107, 72, 42, 0.16));
+  filter: var(--drop-shadow-stamp);
 }
 
 .dish-stamp--md {
   --stamp-size: 88px;
   max-width: min(88px, 100%);
-  filter: drop-shadow(0 2px 4px rgba(107, 72, 42, 0.13));
+  filter: var(--drop-shadow-stamp);
 }
 
 .dish-stamp--lg {
   --stamp-size: 142px;
-  filter: drop-shadow(0 9px 15px rgba(107, 72, 42, 0.2));
+  filter: var(--drop-shadow-stamp-lg);
 }
 
 .dish-stamp--silhouette {
+  --stamp-ring: var(--stamp-neutral);
+  --stamp-ring-soft: var(--stamp-neutral-soft);
   opacity: 0.82;
-  filter: grayscale(0.95) drop-shadow(0 2px 4px rgba(107, 72, 42, 0.1));
+  filter: grayscale(0.95) var(--drop-shadow-stamp);
+}
+
+/* 图鉴未收集：保留稀有度色环，只把中心图案做成灰色剪影。 */
+.dish-stamp--locked {
+  --stamp-ring: var(--rarity-line);
+  --stamp-ring-soft: var(--stamp-locked-soft);
+  opacity: 0.92;
 }
 
 .dish-stamp--animate {
-  animation: stamp-press 0.58s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  animation: stamp-press var(--motion-flip) var(--ease-spring) both;
 }
 
 .dish-stamp__emoji {
-  font-family: var(--font-rounded);
-  font-size: 33px;
+  font-family: var(--font-body);
+  font-size: var(--text-33);
 }
 
 .dish-stamp__rarity {
-  font-family: var(--font-rounded);
-  font-size: 7.4px;
-  font-weight: 800;
+  font-family: var(--font-body);
+  font-size: var(--text-7-4);
+  font-weight: var(--weight-heavy);
   letter-spacing: 0.04em;
 }
 
 .dish-stamp__count {
-  font-family: var(--font-rounded);
-  font-size: 7.2px;
-  font-weight: 800;
+  font-family: var(--font-body);
+  font-size: var(--text-7-2);
+  font-weight: var(--weight-heavy);
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .dish-stamp__date {
-  font-family: var(--font-rounded);
-  font-size: 7px;
-  font-weight: 700;
+  font-family: var(--font-body);
+  font-size: var(--text-7);
+  font-weight: var(--weight-bold);
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
 }
@@ -93,15 +163,15 @@
 
 /* 缩到 44px 后 SVG 里的字会跟着变小，按用户单位补回可读字号。 */
 .stamp-cluster .dish-stamp__rarity {
-  font-size: 10px;
+  font-size: var(--text-10);
 }
 
 .stamp-cluster .dish-stamp__count {
-  font-size: 9px;
+  font-size: var(--text-9);
 }
 
 .stamp-cluster .dish-stamp__date {
-  font-size: 9.5px;
+  font-size: var(--text-9-5);
 }
 
 .stamp-cluster__more {
@@ -113,10 +183,10 @@
   place-items: center;
   border: 1.5px solid var(--line-strong);
   border-radius: var(--radius-pill);
-  background: #fff8ea;
+  background: var(--surface-soft);
   color: var(--cocoa-muted);
-  font-size: 9px;
-  font-weight: 800;
+  font-size: var(--text-9);
+  font-weight: var(--weight-heavy);
   font-variant-numeric: tabular-nums;
 }
 
@@ -141,24 +211,22 @@
   flex: none;
   margin-top: 2px;
   place-items: center;
-  border: 1.5px solid #eecb7f;
+  border: 1.5px solid var(--accent-line-strong);
   border-radius: 50%;
   background: var(--butter);
-  box-shadow:
-    0 3px 0 #e5c07a,
-    0 8px 16px rgba(139, 94, 60, 0.14);
-  color: #7c5217;
-  font-size: 24px;
-  font-weight: 700;
+  box-shadow: var(--shadow-stamp-card);
+  color: var(--accent-ink);
+  font-size: var(--text-24);
+  font-weight: var(--weight-bold);
   line-height: 1;
   transition:
-    transform 0.14s ease,
-    box-shadow 0.14s ease;
+    transform var(--motion-flick) var(--ease-standard),
+    box-shadow var(--motion-flick) var(--ease-standard);
 }
 
 .stamp-add-button:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #e5c07a;
+  box-shadow: var(--shadow-stamp-press);
 }
 
 .stamp-filter {
@@ -173,11 +241,11 @@
 
 .stamp-book__hint {
   padding: 9px 12px;
-  border: 1px dashed #dcbd93;
-  border-radius: 12px;
-  background: #fff9ee;
+  border: 1px dashed var(--line-dash);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sheet);
   color: var(--cocoa-muted);
-  font-size: 9.5px;
+  font-size: var(--text-9-5);
   line-height: 1.6;
   text-align: center;
 }
@@ -206,13 +274,13 @@
   gap: 2px;
   padding: 10px 6px 9px;
   border: 1px solid var(--line);
-  border-radius: 17px;
+  border-radius: var(--radius-md);
   background: var(--milk);
   box-shadow: var(--shadow-soft);
   text-align: center;
   transition:
-    transform 0.16s ease,
-    box-shadow 0.16s ease;
+    transform var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-fast) var(--ease-standard);
 }
 
 .stamp-book-card:active {
@@ -221,8 +289,8 @@
 
 .stamp-book-card.is-locked {
   border-style: dashed;
-  border-color: #e3d3bd;
-  background: #fdf6e9;
+  border-color: var(--line-soft);
+  background: var(--surface-note-2);
   box-shadow: none;
 }
 
@@ -231,16 +299,16 @@
   margin-top: 3px;
   overflow-wrap: anywhere;
   color: var(--cocoa);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--text-10);
+  font-weight: var(--weight-heavy);
   line-height: 1.3;
 }
 
 .stamp-book-card__meta {
   max-width: 100%;
   color: var(--cocoa-faint);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--text-8);
+  font-weight: var(--weight-bold);
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
 }
@@ -256,9 +324,9 @@
   padding: 2px 6px;
   border-radius: var(--radius-pill);
   background: var(--butter);
-  color: #7c5217;
-  font-size: 7.5px;
-  font-weight: 800;
+  color: var(--accent-ink);
+  font-size: var(--text-7-5);
+  font-weight: var(--weight-heavy);
   line-height: 1.4;
 }
 
@@ -267,12 +335,44 @@
 }
 
 .stamp-book-card.is-archived .stamp-book-card__badge {
-  background: #f0e3d0;
+  background: var(--surface-muted-3);
   color: var(--cocoa-muted);
 }
 
 .stamp-book-card.is-archived .stamp-book-card__name {
   color: var(--cocoa-muted);
+}
+
+.stamp-book-card__category {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--overlay-stronger);
+  font-size: var(--text-10);
+  line-height: 1.2;
+}
+
+.stamp-search {
+  display: block;
+  margin: 10px 0 4px;
+}
+
+.stamp-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--milk);
+  color: var(--cocoa);
+  font: inherit;
+  font-size: var(--text-11);
+}
+
+.stamp-search input:focus-visible {
+  outline: 2px solid var(--marmalade);
+  outline-offset: 2px;
 }
 
 /* 印章详情 */
@@ -294,8 +394,8 @@
 
 .stamp-detail__locked {
   color: var(--cocoa-faint);
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: var(--text-9-5);
+  font-weight: var(--weight-bold);
   line-height: 1.5;
   text-align: center;
 }
@@ -312,39 +412,39 @@
   gap: 2px;
   padding: 9px 11px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #fffaf0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
 }
 
 .stamp-detail__facts dt {
   color: var(--cocoa-faint);
-  font-size: 8.5px;
-  font-weight: 700;
+  font-size: var(--text-8-5);
+  font-weight: var(--weight-bold);
   line-height: 1.3;
 }
 
 .stamp-detail__facts dd {
   overflow-wrap: anywhere;
   color: var(--cocoa);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--text-12);
+  font-weight: var(--weight-heavy);
   line-height: 1.3;
   font-variant-numeric: tabular-nums;
 }
 
 .stamp-detail__tip {
   padding: 9px 11px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--butter-soft);
-  color: #7c5217;
-  font-size: 9.5px;
+  color: var(--accent-ink);
+  font-size: var(--text-9-5);
   line-height: 1.65;
 }
 
 .stamp-detail__ingredients h3 {
   margin-bottom: 6px;
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: var(--text-10-5);
+  font-weight: var(--weight-heavy);
 }
 
 .stamp-ingredient-list {
@@ -360,9 +460,9 @@
   gap: 10px;
   padding: 8px 11px;
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-xs);
   background: var(--milk);
-  font-size: 10px;
+  font-size: var(--text-10);
   line-height: 1.4;
 }
 
@@ -371,38 +471,38 @@
   min-width: 0;
   gap: 1px;
   overflow-wrap: anywhere;
-  font-weight: 700;
+  font-weight: var(--weight-bold);
 }
 
 .stamp-ingredient__meta {
   color: var(--cocoa-faint);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: var(--text-8);
+  font-weight: var(--weight-bold);
   font-variant-numeric: tabular-nums;
 }
 
 .stamp-ingredient__grams {
   flex: none;
   color: var(--cocoa-muted);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
   font-variant-numeric: tabular-nums;
 }
 
 .stamp-detail__next {
   padding: 9px 11px;
-  border: 1px dashed #e3c99a;
-  border-radius: 12px;
-  background: #fff9ee;
-  color: #8a6b4d;
-  font-size: 9.5px;
-  font-weight: 700;
+  border: 1px dashed var(--line-warm);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sheet);
+  color: var(--text-soft);
+  font-size: var(--text-9-5);
+  font-weight: var(--weight-bold);
   line-height: 1.55;
   text-align: center;
 }
 
 .stamp-detail__cooking {
   border: 1px dashed var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: var(--milk);
   padding: 0 11px;
 }
@@ -413,9 +513,9 @@
   align-items: center;
   padding: 7px 0;
   cursor: pointer;
-  color: #8a5b16;
-  font-size: 10px;
-  font-weight: 800;
+  color: var(--accent-ink-deep);
+  font-size: var(--text-10);
+  font-weight: var(--weight-heavy);
   line-height: 1.4;
   list-style: none;
 }
@@ -428,7 +528,7 @@
   content: ' ▾';
   margin-left: auto;
   padding-left: 8px;
-  font-size: 8px;
+  font-size: var(--text-8);
 }
 
 .stamp-detail__cooking[open] summary::after {
@@ -441,13 +541,13 @@
   margin: 0;
   padding: 0 0 11px 17px;
   color: var(--cocoa-muted);
-  font-size: 9.5px;
+  font-size: var(--text-9-5);
   line-height: 1.6;
 }
 
 .stamp-detail__steps li::marker {
   color: var(--marmalade);
-  font-weight: 800;
+  font-weight: var(--weight-heavy);
 }
 
 /* 详情底部可能同时出现编辑/删除/关闭三个按钮。 */
@@ -458,7 +558,7 @@
   min-width: 0;
   flex: 1 1 0;
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: var(--text-12-5);
 }
 
 /* 升级提示 */
@@ -471,25 +571,25 @@
   margin-top: 12px;
   padding: 7px 13px;
   border: 1px solid
-    color-mix(in srgb, var(--stamp-color, var(--marmalade)) 42%, #f0dcc2);
+    color-mix(in srgb, var(--stamp-color, var(--marmalade)) 42%, var(--mix-stamp-fallback));
   border-radius: var(--radius-pill);
   background: var(--stamp-soft, var(--butter-soft));
   color: var(--cocoa);
-  font-size: 10px;
-  font-weight: 800;
+  font-size: var(--text-10);
+  font-weight: var(--weight-heavy);
   line-height: 1.35;
-  animation: upgrade-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: upgrade-pop var(--motion-slow) var(--ease-spring-soft) both;
 }
 
 .reward-upgrade__spark {
-  font-size: 11px;
+  font-size: var(--text-11);
   line-height: 1;
 }
 
 .reward-upgrade__path {
   color: var(--stamp-color, var(--marmalade-deep));
-  font-size: 9px;
-  font-weight: 800;
+  font-size: var(--text-9);
+  font-weight: var(--weight-heavy);
   font-variant-numeric: tabular-nums;
 }
 

@@ -1,18 +1,27 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 
 import { APP_VERSION } from '@/config/appMeta'
-import { ACTIVITY_LEVELS, GOAL_META } from '@/config/gameConfig'
+import {
+  ACTIVITY_LEVELS,
+  GOAL_META,
+  type ThemeName,
+} from '@/config/gameConfig'
 import { calcTargetCalories } from '@/core/targetCalories'
+import type { SnapshotMeta } from '@/storage/SnapshotStore'
 import { useAppStore } from '@/store/useAppStore'
 import { useUiStore } from '@/store/useUiStore'
 
+import { RestoreSnapshotDialog } from '../components/backup/RestoreSnapshotDialog'
+import { SnapshotList } from '../components/backup/SnapshotList'
 import { ConfirmDialog } from '../components/gameplay/ConfirmDialog'
-import { formatKcal, isCaloriesVisible } from '../formatKcal'
+import { ThemePicker } from '../components/settings/ThemePicker'
+import { formatKcal, formatKcalWithUnit } from '../formatKcal'
 import {
   buildExportFileName,
   validateImportFile,
 } from '../settings/dataTransfer'
+import { applyTheme } from '../theme'
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -28,6 +37,9 @@ export function SettingsPage() {
   const clearData = useAppStore((state) => state.clearData)
   const clearProfile = useAppStore((state) => state.clearProfile)
   const setShowCalories = useAppStore((state) => state.setShowCalories)
+  const setTheme = useAppStore((state) => state.setTheme)
+  const listSnapshots = useAppStore((state) => state.listSnapshots)
+  const restoreSnapshot = useAppStore((state) => state.restoreSnapshot)
 
   const openProfileEditor = useUiStore((state) => state.openProfileEditor)
   const setActiveTab = useUiStore((state) => state.setActiveTab)
@@ -45,6 +57,19 @@ export function SettingsPage() {
   const [profileConfirmError, setProfileConfirmError] = useState<
     string | null
   >(null)
+  const [pendingImportFile, setPendingImportFile] = useState<File | null>(null)
+  const [importConfirmError, setImportConfirmError] = useState<string | null>(
+    null,
+  )
+  const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([])
+  const [snapshotsLoading, setSnapshotsLoading] = useState(true)
+  const [snapshotsError, setSnapshotsError] = useState<string | null>(null)
+  const [pendingRestore, setPendingRestore] = useState<SnapshotMeta | null>(
+    null,
+  )
+  const [restoring, setRestoring] = useState(false)
+  const [restoreError, setRestoreError] = useState<string | null>(null)
+  const [savingTheme, setSavingTheme] = useState(false)
 
   const goal = profile ? GOAL_META[profile.goal] : null
   const activity = profile
@@ -55,8 +80,27 @@ export function SettingsPage() {
         calcTargetCalories({ ...profile, manualTargetKcal: undefined }),
       )
     : null
-  const caloriesVisible = isCaloriesVisible(profile, settings.showCalories)
-  const busy = exporting || importing || clearing || clearingProfile
+  const caloriesVisible = settings.showCalories
+  const busy =
+    exporting || importing || clearing || clearingProfile || restoring
+
+  async function refreshSnapshots() {
+    setSnapshotsLoading(true)
+    const result = await listSnapshots()
+    if (result.status === 'ok') {
+      setSnapshots(result.snapshots)
+      setSnapshotsError(null)
+    } else {
+      setSnapshotsError(result.message)
+    }
+    setSnapshotsLoading(false)
+  }
+
+  useEffect(() => {
+    void refreshSnapshots()
+    // 只在进入设置页时读一次；后续操作会主动刷新。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleExport() {
     setDataError(null)
@@ -90,7 +134,7 @@ export function SettingsPage() {
     fileInputRef.current?.click()
   }
 
-  async function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
+  function handleImportFile(event: ChangeEvent<HTMLInputElement>) {
     const input = event.currentTarget
     const file = input.files?.[0]
     // 立刻清空，保证同一个文件可以再次选择。
@@ -106,16 +150,35 @@ export function SettingsPage() {
     }
 
     setDataError(null)
+    setImportConfirmError(null)
+    setPendingImportFile(file)
+  }
+
+  function closeImportDialog() {
+    if (importing) {
+      return
+    }
+    setPendingImportFile(null)
+    setImportConfirmError(null)
+  }
+
+  async function handleImportConfirm() {
+    if (!pendingImportFile) {
+      return
+    }
+    setImportConfirmError(null)
     setImporting(true)
     try {
-      const result = await importJson(await file.text())
+      const result = await importJson(await pendingImportFile.text())
       if (result.status === 'imported') {
+        setPendingImportFile(null)
         showToast('备份导入成功')
+        await refreshSnapshots()
       } else {
-        setDataError(result.message)
+        setImportConfirmError(result.message)
       }
     } catch (error) {
-      setDataError(errorMessage(error))
+      setImportConfirmError(errorMessage(error))
     } finally {
       setImporting(false)
     }
@@ -126,6 +189,23 @@ export function SettingsPage() {
       await setShowCalories(!settings.showCalories)
     } catch {
       // 持久化失败时 store 会切到启动错误页，这里不重复提示。
+    }
+  }
+
+  async function handleThemeChange(next: ThemeName) {
+    if (savingTheme || next === settings.theme) {
+      return
+    }
+
+    const previous = settings.theme
+    applyTheme(next)
+    setSavingTheme(true)
+    try {
+      await setTheme(next)
+    } catch {
+      applyTheme(previous)
+    } finally {
+      setSavingTheme(false)
     }
   }
 
@@ -178,13 +258,53 @@ export function SettingsPage() {
     setProfileConfirmError(null)
     setClearingProfile(true)
     try {
-      await clearProfile()
-      setProfileConfirmOpen(false)
-      showToast('个人档案已清除')
+      const result = await clearProfile()
+      if (result.status === 'cleared') {
+        setProfileConfirmOpen(false)
+        showToast('个人档案已清除')
+        await refreshSnapshots()
+      } else {
+        setProfileConfirmError(result.message)
+      }
     } catch (error) {
       setProfileConfirmError(errorMessage(error))
     } finally {
       setClearingProfile(false)
+    }
+  }
+
+  function openRestoreDialog(snapshot: SnapshotMeta) {
+    setRestoreError(null)
+    setPendingRestore(snapshot)
+  }
+
+  function closeRestoreDialog() {
+    if (restoring) {
+      return
+    }
+    setPendingRestore(null)
+    setRestoreError(null)
+  }
+
+  async function handleRestore() {
+    if (!pendingRestore) {
+      return
+    }
+    setRestoreError(null)
+    setRestoring(true)
+    try {
+      const result = await restoreSnapshot(pendingRestore.id)
+      if (result.status === 'restored') {
+        setPendingRestore(null)
+        showToast('已恢复到选定快照')
+        await refreshSnapshots()
+      } else {
+        setRestoreError(result.message)
+      }
+    } catch (error) {
+      setRestoreError(errorMessage(error))
+    } finally {
+      setRestoring(false)
     }
   }
 
@@ -227,11 +347,13 @@ export function SettingsPage() {
                 <strong>
                   {caloriesVisible
                     ? targetCalories !== null
-                      ? formatKcal(targetCalories, caloriesVisible)
+                      ? formatKcal(targetCalories, true)
                       : '待设置'
                     : '?'}
                 </strong>
-                {targetCalories !== null && <small> kcal</small>}
+                {caloriesVisible && targetCalories !== null && (
+                  <small> kcal</small>
+                )}
               </dd>
             </div>
           </dl>
@@ -239,10 +361,10 @@ export function SettingsPage() {
           {targetCalories !== null && (
             <p className="profile-card__target-source">
               {profile.manualTargetKcal !== undefined
-                ? `手动设定；公式估算约 ${formatKcal(
+                ? `手动设定；公式估算约 ${formatKcalWithUnit(
                     formulaTarget,
                     caloriesVisible,
-                  )} kcal`
+                  )}`
                 : '按 Mifflin-St Jeor 公式估算'}
             </p>
           )}
@@ -301,72 +423,112 @@ export function SettingsPage() {
       )}
 
       <section className="settings-prefs" aria-label="显示偏好">
-        <label className={`switch-row${profile ? '' : ' is-disabled'}`}>
+        <label className="switch-row">
           <input
             type="checkbox"
             checked={caloriesVisible}
             onChange={() => {
               void handleToggleCalories()
             }}
-            disabled={!profile || busy}
+            disabled={busy}
           />
           <span className="switch-row__track" aria-hidden="true">
             <span />
           </span>
           <span className="switch-row__text">
             <strong>显示热量</strong>
-            <small>
-              {profile
-                ? '关闭后所有展示型热量会变成 ?，记录仍照常保存。'
-                : '填写个人档案后可以打开。'}
-            </small>
+            <small>关闭后所有展示型热量会变成 ?，记录仍照常保存。</small>
           </span>
         </label>
       </section>
 
-      <div className="settings-list">
-        <button
-          type="button"
-          className="settings-row settings-row--action"
-          onClick={() => {
-            void handleExport()
-          }}
-          disabled={busy}
-        >
-          <span>
-            <strong>导出备份</strong>
-            <small>保存成一份 JSON 文件，含自制菜图片</small>
-          </span>
-          <span className="settings-row__mark" aria-hidden="true">
-            {exporting ? '…' : '↓'}
-          </span>
-        </button>
-
-        <button
-          type="button"
-          className="settings-row settings-row--action"
-          onClick={handleChooseFile}
-          disabled={busy}
-        >
-          <span>
-            <strong>导入备份</strong>
-            <small>导入会覆盖当前全部记录</small>
-          </span>
-          <span className="settings-row__mark" aria-hidden="true">
-            {importing ? '…' : '↑'}
-          </span>
-        </button>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={(event) => {
-            void handleImportFile(event)
+      <section className="settings-section" aria-labelledby="appearance-title">
+        <h2 className="settings-section__title" id="appearance-title">
+          外观
+        </h2>
+        <ThemePicker
+          value={settings.theme}
+          disabled={busy || savingTheme}
+          onChange={(next) => {
+            void handleThemeChange(next)
           }}
         />
+      </section>
 
+      <section className="settings-section" aria-labelledby="backup-title">
+        <h2 className="settings-section__title" id="backup-title">
+          数据备份
+        </h2>
+        <div className="settings-list">
+          <button
+            type="button"
+            className="settings-row settings-row--action"
+            onClick={() => {
+              void handleExport()
+            }}
+            disabled={busy}
+          >
+            <span>
+              <strong>导出备份</strong>
+              <small>保存成一份 JSON 文件，含自制菜图片</small>
+            </span>
+            <span className="settings-row__mark" aria-hidden="true">
+              {exporting ? '…' : '↓'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="settings-row settings-row--action"
+            onClick={handleChooseFile}
+            disabled={busy}
+          >
+            <span>
+              <strong>导入备份</strong>
+              <small>会覆盖当前全部记录；导入前自动创建快照</small>
+            </span>
+            <span className="settings-row__mark" aria-hidden="true">
+              {importing ? '…' : '↑'}
+            </span>
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={handleImportFile}
+          />
+        </div>
+
+        <div className="snapshot-panel" aria-label="本地快照">
+          <div className="snapshot-panel__head">
+            <span>
+              <strong>本地快照</strong>
+              <small>升级、清空、导入、恢复前自动创建，最多保留 10 份</small>
+            </span>
+            <button
+              type="button"
+              className="snapshot-refresh"
+              onClick={() => {
+                void refreshSnapshots()
+              }}
+              disabled={snapshotsLoading || busy}
+            >
+              {snapshotsLoading ? '读取中…' : '刷新'}
+            </button>
+          </div>
+          <SnapshotList
+            snapshots={snapshots}
+            loading={snapshotsLoading}
+            error={snapshotsError}
+            restoringId={restoring ? (pendingRestore?.id ?? '') : null}
+            onRestore={openRestoreDialog}
+          />
+        </div>
+      </section>
+
+      <div className="settings-list">
         <button
           type="button"
           className="settings-row settings-row--action settings-row--danger"
@@ -375,7 +537,7 @@ export function SettingsPage() {
         >
           <span>
             <strong>清空数据</strong>
-            <small>重新开始一本空白手帐</small>
+            <small>重新开始一本空白手帐；清空前自动创建快照</small>
           </span>
           <span className="settings-row__mark" aria-hidden="true">
             ×
@@ -420,9 +582,53 @@ export function SettingsPage() {
             <li>显示热量和提示关闭状态</li>
           </ul>
           <p className="confirm-dialog__text">
-            这个操作不能撤销，建议先导出备份。
+            清空前会自动创建一份快照，可以在「数据备份」里恢复；仍建议先导出备份。
           </p>
         </ConfirmDialog>
+      )}
+
+      {pendingImportFile && (
+        <ConfirmDialog
+          title="要导入这份备份吗？"
+          description="导入会覆盖当前全部记录："
+          confirmLabel="确认导入"
+          pendingLabel="正在导入…"
+          pending={importing}
+          error={importConfirmError}
+          tone="danger"
+          onCancel={closeImportDialog}
+          onConfirm={() => {
+            void handleImportConfirm()
+          }}
+        >
+          <dl className="snapshot-detail">
+            <div>
+              <dt>文件</dt>
+              <dd>{pendingImportFile.name}</dd>
+            </div>
+            <div>
+              <dt>大小</dt>
+              <dd>
+                {Math.max(1, Math.round(pendingImportFile.size / 1024))} KB
+              </dd>
+            </div>
+          </dl>
+          <p className="confirm-dialog__text">
+            导入前会自动创建一份当前状态的快照，万一选错了还能恢复。
+          </p>
+        </ConfirmDialog>
+      )}
+
+      {pendingRestore && (
+        <RestoreSnapshotDialog
+          snapshot={pendingRestore}
+          pending={restoring}
+          error={restoreError}
+          onCancel={closeRestoreDialog}
+          onConfirm={() => {
+            void handleRestore()
+          }}
+        />
       )}
 
       {profileConfirmOpen && (
@@ -441,10 +647,9 @@ export function SettingsPage() {
         >
           <ul className="confirm-dialog__list">
             <li>身体信息和每日目标</li>
-            <li>“显示热量”会自动关闭</li>
           </ul>
           <p className="confirm-dialog__text">
-            打卡记录、印章和历史都会保留。这个操作不能撤销。
+            “显示热量”开关会保持当前状态。打卡记录、印章和历史都会保留。执行前会自动创建一份快照，可以在「数据备份」里恢复。
           </p>
         </ConfirmDialog>
       )}

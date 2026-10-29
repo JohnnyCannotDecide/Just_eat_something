@@ -1,13 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 
 import { useAppStore } from '@/store/useAppStore'
 import { useUiStore } from '@/store/useUiStore'
 
 import { detectClockChange, readClockSnapshot } from './clock'
 import type { ClockChange } from './clock'
+import { applyTheme } from './theme'
 import { AdModalHost } from './components/gameplay/AdModalHost'
 import { ToastHost } from './components/gameplay/ToastHost'
 import { BootScreen } from './components/BootScreen'
+import { DataRecoveryScreen } from './components/DataRecoveryScreen'
 import { TabBar } from './components/TabBar'
 import { CalendarPage } from './pages/CalendarPage'
 import { ProfilePage } from './pages/ProfilePage'
@@ -26,6 +28,7 @@ export default function App() {
   const error = useAppStore((state) => state.error)
   const hydrate = useAppStore((state) => state.hydrate)
   const refreshForToday = useAppStore((state) => state.refreshForToday)
+  const theme = useAppStore((state) => state.data.settings.theme)
 
   const activeTab = useUiStore((state) => state.activeTab)
   const isProfileEditorOpen = useUiStore(
@@ -39,6 +42,11 @@ export default function App() {
   useEffect(() => {
     void hydrate()
   }, [hydrate])
+
+  // 首屏内联脚本已应用一次；这里覆盖 import / 恢复快照 / 清空数据带来的变化。
+  useLayoutEffect(() => {
+    applyTheme(theme)
+  }, [theme])
 
   useEffect(() => {
     if (status !== 'ready') {
@@ -104,6 +112,10 @@ export default function App() {
         }}
       />
     )
+  }
+
+  if (status === 'recovery') {
+    return <DataRecoveryScreen />
   }
 
   return (

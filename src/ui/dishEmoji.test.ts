@@ -10,7 +10,7 @@ import {
 
 describe('dish emoji placeholders', () => {
   it('covers every dish in the catalog', () => {
-    expect(dishes).toHaveLength(60)
+    expect(dishes).toHaveLength(94)
     for (const dish of dishes) {
       expect(getDishEmoji(dish.id)).not.toBe(DISH_EMOJI_FALLBACK)
     }

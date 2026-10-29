@@ -4,12 +4,14 @@ import type { TodayView } from '../../selectors/todayView'
 
 interface CalorieBentoProps {
   view: TodayView
+  onOpenProfile: () => void
 }
 
-export function CalorieBento({ view }: CalorieBentoProps) {
+export function CalorieBento({ view, onOpenProfile }: CalorieBentoProps) {
   const canShow = view.showCalories
+  const hasProfile = view.hasProfile
   const hasTarget = view.targetCalories !== null
-  const isOver = canShow && view.overCalories > 0
+  const isOver = canShow && hasTarget && view.overCalories > 0
   const stampCount = view.meals.reduce(
     (sum, meal) => sum + meal.stamps.length,
     0,
@@ -19,24 +21,14 @@ export function CalorieBento({ view }: CalorieBentoProps) {
     : isOver
       ? '超出目标'
       : '还可吃'
-  const targetText = !canShow
-    ? '?'
-    : hasTarget
-      ? formatKcal(view.targetCalories, canShow)
-      : '待设置'
+  const targetText = !canShow ? '?' : formatKcal(view.targetCalories, canShow)
   const remainingValue = !canShow
     ? '?'
-    : hasTarget
-      ? formatKcal(
-          isOver ? view.overCalories : view.remainingCalories,
-          canShow,
-        )
-      : '待设置'
-  const progressText = !canShow
-    ? '?'
-    : hasTarget
-      ? `${view.progressPercent}%`
-      : '目标待设置'
+    : formatKcal(
+        isOver ? view.overCalories : view.remainingCalories,
+        canShow,
+      )
+  const progressText = !canShow ? '?' : `${view.progressPercent}%`
   const progressVisible = canShow && hasTarget
 
   return (
@@ -74,47 +66,41 @@ export function CalorieBento({ view }: CalorieBentoProps) {
 
           <p className="bento-cell__number">
             {formatKcal(view.consumedCalories, canShow)}
-            <small> / {targetText} kcal</small>
+            {hasProfile ? (
+              <small> / {targetText} kcal</small>
+            ) : (
+              <small> kcal</small>
+            )}
           </p>
 
-          <div
-            className="bento-progress"
-            role={progressVisible ? 'progressbar' : undefined}
-            aria-label={
-              !canShow
-                ? '热量已隐藏'
-                : hasTarget
-                  ? '今日热量进度'
-                  : '还没有设置热量目标'
-            }
-            aria-valuemin={progressVisible ? 0 : undefined}
-            aria-valuemax={
-              progressVisible ? (view.targetCalories ?? 0) : undefined
-            }
-            aria-valuenow={
-              progressVisible
-                ? Math.min(view.consumedCalories, view.targetCalories ?? 0)
-                : undefined
-            }
-            aria-valuetext={
-              progressVisible
-                ? `${formatKcal(view.consumedCalories, canShow)} / ${formatKcal(
-                    view.targetCalories,
-                    canShow,
-                  )} 千卡，已完成 ${view.progressPercent}%`
-                : undefined
-            }
-          >
-            <span
-              className={`bento-progress__fill${
-                isOver ? ' is-over' : ''
-              }`}
-              style={{ width: `${progressVisible ? view.progressPercent : 0}%` }}
-            />
-          </div>
+          {progressVisible && (
+            <div
+              className="bento-progress"
+              role="progressbar"
+              aria-label="今日热量进度"
+              aria-valuemin={0}
+              aria-valuemax={view.targetCalories ?? 0}
+              aria-valuenow={Math.min(
+                view.consumedCalories,
+                view.targetCalories ?? 0,
+              )}
+              aria-valuetext={`${formatKcal(
+                view.consumedCalories,
+                canShow,
+              )} / ${formatKcal(
+                view.targetCalories,
+                canShow,
+              )} 千卡，已完成 ${view.progressPercent}%`}
+            >
+              <span
+                className="bento-progress__fill"
+                style={{ width: `${view.progressPercent}%` }}
+              />
+            </div>
+          )}
 
           <div className="bento-cell__footline">
-            <span>{progressText}</span>
+            {hasProfile && <span>{progressText}</span>}
             <span>
               {view.checkedInCount > 0
                 ? `已记录 ${view.checkedInCount} 餐`
@@ -123,22 +109,32 @@ export function CalorieBento({ view }: CalorieBentoProps) {
           </div>
         </div>
 
-        <div className={`bento-cell bento-cell--remaining${isOver ? ' is-over' : ''}`}>
-          <span className="bento-cell__label">{remainingLabel}</span>
-          <p className="bento-cell__side-number">
-            {remainingValue}
-            {canShow && hasTarget && <small>kcal</small>}
-          </p>
-          <span className="bento-cell__note">
-            {!canShow
-              ? '在设置里打开就能看到'
-              : !hasTarget
-                ? '完成设置后出现'
+        {hasProfile ? (
+          <div className="bento-cell bento-cell--remaining">
+            <span className="bento-cell__label">{remainingLabel}</span>
+            <p className="bento-cell__side-number">
+              {remainingValue}
+              {canShow && <small>kcal</small>}
+            </p>
+            <span className="bento-cell__note">
+              {!canShow
+                ? '在设置里打开就能看到'
                 : isOver
-                  ? '不用责怪自己'
+                  ? '不用责怪自己，明天继续'
                   : '留给下一餐吧'}
-          </span>
-        </div>
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="bento-cell bento-cell--remaining bento-cell--profile-cta"
+            onClick={onOpenProfile}
+          >
+            <span className="bento-cell__label">每日目标与余量</span>
+            <span className="bento-cell__cta">填写档案查看余量</span>
+            <span className="bento-cell__note">不填也能继续记录</span>
+          </button>
+        )}
 
         <div className="bento-cell bento-cell--tokens">
           <div className="bento-cell__token-head">

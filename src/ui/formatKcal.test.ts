@@ -1,15 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatKcal, isCaloriesVisible } from './formatKcal'
-
-const PROFILE = {
-  sex: 'female',
-  age: 30,
-  heightCm: 165,
-  weightKg: 60,
-  activity: 'sedentary',
-  goal: 'maintain',
-} as const
+import { formatKcal, formatKcalWithUnit } from './formatKcal'
 
 describe('formatKcal', () => {
   it('rounds visible numbers to whole calories', () => {
@@ -22,20 +13,22 @@ describe('formatKcal', () => {
     expect(formatKcal(232, false)).toBe('?')
   })
 
-  it('returns a question mark for missing or invalid values', () => {
-    expect(formatKcal(null, true)).toBe('?')
-    expect(formatKcal(undefined, true)).toBe('?')
-    expect(formatKcal(Number.NaN, true)).toBe('?')
-    expect(formatKcal(Number.POSITIVE_INFINITY, true)).toBe('?')
-    expect(formatKcal(null, false)).toBe('?')
+  it('shows 未填 for missing or invalid values regardless of the switch', () => {
+    expect(formatKcal(null, true)).toBe('未填')
+    expect(formatKcal(undefined, true)).toBe('未填')
+    expect(formatKcal(Number.NaN, true)).toBe('未填')
+    expect(formatKcal(Number.POSITIVE_INFINITY, true)).toBe('未填')
+    expect(formatKcal(null, false)).toBe('未填')
+    expect(formatKcal(Number.NaN, false)).toBe('未填')
   })
 })
 
-describe('isCaloriesVisible', () => {
-  it('requires both a profile and the switch', () => {
-    expect(isCaloriesVisible({ ...PROFILE }, true)).toBe(true)
-    expect(isCaloriesVisible({ ...PROFILE }, false)).toBe(false)
-    expect(isCaloriesVisible(null, true)).toBe(false)
-    expect(isCaloriesVisible(null, false)).toBe(false)
+describe('formatKcalWithUnit', () => {
+  it('appends the unit only for real numbers', () => {
+    expect(formatKcalWithUnit(232, true)).toBe('232 kcal')
+    expect(formatKcalWithUnit(231.6, true)).toBe('232 kcal')
+    expect(formatKcalWithUnit(232, false)).toBe('?')
+    expect(formatKcalWithUnit(null, true)).toBe('未填')
+    expect(formatKcalWithUnit(null, false)).toBe('未填')
   })
 })

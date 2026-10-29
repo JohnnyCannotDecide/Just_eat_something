@@ -12,6 +12,18 @@ import type {
  * 业务代码不要另写魔法数字；需要调整规则时只改这里。
  */
 
+export const THEME_IDS = ['simple', 'cute', 'vivid'] as const
+export type ThemeName = (typeof THEME_IDS)[number]
+/** 默认主题；老数据缺字段或值非法时回退到这里。 */
+export const DEFAULT_THEME: ThemeName = 'cute'
+
+export function isThemeName(value: unknown): value is ThemeName {
+  return (
+    typeof value === 'string' &&
+    (THEME_IDS as readonly string[]).includes(value)
+  )
+}
+
 export const RARITY_ORDER = ['R', 'SR', 'SSR', 'UR'] as const satisfies readonly Rarity[]
 
 /** 普通抽卡概率，总和 100。 */
@@ -32,14 +44,25 @@ export const PITY = {
 export const DRAW_LIMITS = {
   /** 每餐基础抽卡次数。 */
   basePerMeal: 2,
-  /** 每餐最多通过广告额外抽卡次数。 */
-  adBonusPerMeal: 3,
   /** 抽卡券仅当天有效。 */
   tokenValidDays: 1,
 } as const
 
+/** 每餐通过广告额外抽卡的次数；null 表示不设上限。 */
+export const adExtraDrawsPerMeal: number | null = null
+
 /** 抽卡次数消耗顺序：基础次数 → 抽卡券 → 广告。 */
 export const DRAW_SOURCE_ORDER = ['base', 'token', 'ad'] as const
+
+/** 标准份套餐总热量的合理区间；UR 套餐豁免上限。 */
+export const mealKcalRange: Record<
+  MealType,
+  { min: number; max: number }
+> = {
+  breakfast: { min: 250, max: 600 },
+  lunch: { min: 500, max: 900 },
+  dinner: { min: 350, max: 800 },
+}
 
 export const TOKEN_REWARDS = {
   /** 正式菜品打卡后奖励的抽卡券。 */
@@ -75,17 +98,16 @@ export const STAMP_TIERS: readonly StampTierConfig[] = [
 
 export interface StampTierMeta {
   tier: StampTier
-  /** 印章外环颜色。 */
-  color: string
-  /** 印章内部的浅色底。 */
-  soft: string
 }
 
-/** 印章等级视觉；与 STAMP_TIERS 的阈值/文案配合使用。 */
+/**
+ * 印章等级元数据；颜色由 [data-tier] + CSS 令牌决定，随主题切换。
+ * 与 STAMP_TIERS 的阈值/文案配合使用。
+ */
 export const STAMP_TIER_META: Record<StampTier, StampTierMeta> = {
-  bronze: { tier: 'bronze', color: '#B9794A', soft: '#FBEEE4' },
-  silver: { tier: 'silver', color: '#8A9AA5', soft: '#F2F4F6' },
-  gold: { tier: 'gold', color: '#C69A2B', soft: '#FFF3D6' },
+  bronze: { tier: 'bronze' },
+  silver: { tier: 'silver' },
+  gold: { tier: 'gold' },
 }
 
 export interface MealConfig {
@@ -161,14 +183,15 @@ export const CALORIE_SAFETY_FLOOR: Record<Sex, number> = {
 
 export interface RarityMeta {
   label: Rarity
-  color: string
-  glow: string
 }
 
-/** 抽卡与图鉴使用的稀有度视觉标识。 */
+/**
+ * 抽卡与图鉴使用的稀有度文案标识。
+ * 颜色由 [data-rarity] + CSS 令牌决定，随主题切换。
+ */
 export const RARITY_META: Record<Rarity, RarityMeta> = {
-  R: { label: 'R', color: '#9AA7B2', glow: 'rgba(154, 167, 178, 0.4)' },
-  SR: { label: 'SR', color: '#5B9BD5', glow: 'rgba(91, 155, 213, 0.45)' },
-  SSR: { label: 'SSR', color: '#B07CE8', glow: 'rgba(176, 124, 232, 0.55)' },
-  UR: { label: 'UR', color: '#F0A93B', glow: 'rgba(240, 169, 59, 0.65)' },
+  R: { label: 'R' },
+  SR: { label: 'SR' },
+  SSR: { label: 'SSR' },
+  UR: { label: 'UR' },
 }

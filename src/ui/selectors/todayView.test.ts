@@ -44,8 +44,12 @@ const porridge = createComboCandidate(
   'draw',
 )
 
-function makeData(targetCalories: number | null = 2000): AppData {
+function makeData(
+  targetCalories: number | null = 2000,
+  withProfile = true,
+): AppData {
   const data = createEmptyAppData(DAY)
+  data.profile = withProfile ? { ...PROFILE } : null
   data.targetCalories = targetCalories
   return data
 }
@@ -111,8 +115,8 @@ describe('buildTodayView', () => {
     expect(view.meals[0]!.allowance).toMatchObject({
       remainingBase: 2,
       remainingTokens: 0,
-      remainingAds: 3,
-      totalRemaining: 5,
+      remainingAds: null,
+      totalRemaining: null,
     })
     expect(view.meals[0]!.stampSlot).toBe('reserved')
     expect(view.meals[0]!.candidates).toEqual([])
@@ -164,8 +168,8 @@ describe('buildTodayView', () => {
     expect(breakfast.allowance).toMatchObject({
       remainingBase: 0,
       remainingTokens: 1,
-      remainingAds: 3,
-      totalRemaining: 4,
+      remainingAds: null,
+      totalRemaining: null,
     })
   })
 
@@ -408,18 +412,26 @@ describe('buildTodayView', () => {
     expect(breakfast.components[0]?.origin).toBe('combo')
   })
 
-  it('shows calories only with a profile and the switch on', () => {
-    expect(buildTodayView(makeData(), DAY).showCalories).toBe(false)
+  it('shows numbers from the switch alone and gates targets on a profile', () => {
+    const guest = buildTodayView(makeData(2000, false), DAY)
+    expect(guest.showCalories).toBe(true)
+    expect(guest.hasProfile).toBe(false)
+    expect(guest.targetCalories).toBeNull()
+    expect(guest.remainingCalories).toBeNull()
+    expect(guest.overCalories).toBe(0)
+    expect(guest.progressPercent).toBe(0)
 
     const hidden = makeData()
-    hidden.profile = { ...PROFILE }
     hidden.settings.showCalories = false
     expect(buildTodayView(hidden, DAY).showCalories).toBe(false)
+    expect(buildTodayView(hidden, DAY).hasProfile).toBe(true)
 
     const shown = makeData()
-    shown.profile = { ...PROFILE }
     shown.settings.showCalories = true
-    expect(buildTodayView(shown, DAY).showCalories).toBe(true)
+    const view = buildTodayView(shown, DAY)
+    expect(view.showCalories).toBe(true)
+    expect(view.hasProfile).toBe(true)
+    expect(view.targetCalories).toBe(2000)
   })
 
   it('clamps progress and reports over-target calories', () => {
@@ -447,7 +459,7 @@ describe('buildTodayView', () => {
 
     expect(view.tokenCount).toBe(0)
     expect(view.meals[0]!.allowance.remainingTokens).toBe(0)
-    expect(view.meals[0]!.allowance.totalRemaining).toBe(5)
+    expect(view.meals[0]!.allowance.totalRemaining).toBeNull()
   })
 
   it('falls back safely when today is missing', () => {
@@ -496,6 +508,74 @@ describe('buildTodayView', () => {
         kcalPer100g: 116,
       },
     ])
+  })
+
+  it('hints when a lunch combo has no staple', () => {
+    const lunchCombo = combos.find((item) => item.id === 'l_tomato_egg')!
+    const lunch = createComboCandidate(lunchCombo, 'draw')
+    const rice = lunch.components.find(
+      (component) => component.category === 'staple',
+    )!
+    const withoutStaple = discardComponent(lunch, rice.id)
+
+    const data = makeData()
+    setMeal(data, 'lunch', [withoutStaple], withoutStaple.id)
+
+    const view = buildTodayView(data, DAY)
+    expect(view.meals[1]!.stapleHint).toBe(true)
+    expect(view.meals[0]!.stapleHint).toBe(false)
+    expect(view.meals[2]!.stapleHint).toBe(false)
+  })
+
+  it('does not hint when the lunch combo has a staple', () => {
+    const lunchCombo = combos.find((item) => item.id === 'l_tomato_egg')!
+    const lunch = createComboCandidate(lunchCombo, 'draw')
+
+    const data = makeData()
+    setMeal(data, 'lunch', [lunch], lunch.id)
+
+    expect(buildTodayView(data, DAY).meals[1]!.stapleHint).toBe(false)
+  })
+
+  it('treats a dish with providesStaple as a staple even outside the staple category', () => {
+    const lunchCombo = combos.find((item) => item.id === 'l_tomato_egg')!
+    const lunch = createComboCandidate(lunchCombo, 'draw')
+    const rice = lunch.components.find(
+      (component) => component.category === 'staple',
+    )!
+    const swapped: ComboCandidateSnapshot = {
+      ...lunch,
+      components: lunch.components.map((component) =>
+        component.id === rice.id
+          ? {
+              ...component,
+              dishId: 'banana_oat_cup',
+              name: '香蕉燕麦杯',
+              category: 'snack',
+            }
+          : component,
+      ),
+    }
+
+    const data = makeData()
+    setMeal(data, 'lunch', [swapped], swapped.id)
+
+    expect(buildTodayView(data, DAY).meals[1]!.stapleHint).toBe(false)
+  })
+
+  it('hides the lunch staple hint after check-in', () => {
+    const lunchCombo = combos.find((item) => item.id === 'l_tomato_egg')!
+    const lunch = createComboCandidate(lunchCombo, 'draw')
+    const rice = lunch.components.find(
+      (component) => component.category === 'staple',
+    )!
+    const withoutStaple = discardComponent(lunch, rice.id)
+
+    const data = makeData()
+    const record = setMeal(data, 'lunch', [withoutStaple], withoutStaple.id)
+    record.budget.checkedIn = true
+
+    expect(buildTodayView(data, DAY).meals[1]!.stapleHint).toBe(false)
   })
 
   it('keeps non-discarded eaten state on the component list', () => {

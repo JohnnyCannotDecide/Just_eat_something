@@ -5,6 +5,8 @@ interface ComponentListProps {
   components: TodayComponent[]
   pending: boolean
   checkedIn: boolean
+  /** 非当前选中的套餐卡：只预览部件，不提供编辑动作。 */
+  readOnly?: boolean
   showCalories: boolean
   undoableComponentId: string | null
   onToggleEaten: (component: TodayComponent, eaten: boolean) => void
@@ -18,6 +20,7 @@ export function ComponentList({
   components,
   pending,
   checkedIn,
+  readOnly = false,
   showCalories,
   undoableComponentId,
   onToggleEaten,
@@ -35,6 +38,7 @@ export function ComponentList({
             component={component}
             disabled={pending}
             checkedIn={checkedIn}
+            readOnly={readOnly}
             showCalories={showCalories}
             undoable={undoableComponentId === component.id}
             onToggleEaten={onToggleEaten}
@@ -44,7 +48,7 @@ export function ComponentList({
           />
         ))}
       </ul>
-      {!checkedIn && onAddComponent && (
+      {!checkedIn && !readOnly && onAddComponent && (
         <button
           type="button"
           className="add-component-button"

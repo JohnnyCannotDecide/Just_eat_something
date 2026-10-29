@@ -101,7 +101,7 @@ function drawInput(overrides: Partial<MealDrawInput> = {}): MealDrawInput {
     budget: createMealDrawBudget(),
     tokenCount: 0,
     pityCount: 0,
-    candidateComboIds: [],
+    drawnComboIds: [],
     ...overrides,
   }
 }
@@ -112,6 +112,45 @@ describe('drawForMeal', () => {
     combo('c_sr', 'SR'),
     combo('c_breakfast', 'R', ['breakfast']),
   ]
+
+  it('regression: beef → white rice → beef can still draw by reshuffling', () => {
+    const regressionCatalog = [
+      combo('test_beef_veg_rice', 'R'),
+      combo('test_white_rice', 'R'),
+    ]
+
+    const result = drawForMeal(
+      drawInput({
+        budget: { baseUsed: 2, adUsed: 1, checkedIn: false },
+        drawnComboIds: [
+          'test_beef_veg_rice',
+          'test_white_rice',
+          'test_beef_veg_rice',
+        ],
+      }),
+      { rng: () => 0, catalog: regressionCatalog, adCompleted: true },
+    )
+
+    expect(result).toMatchObject({ status: 'drawn', shuffled: true })
+  })
+
+  it('keeps offering ads past the old per-meal cap', () => {
+    const budget = { baseUsed: 2, adUsed: 10, checkedIn: false }
+
+    expect(drawForMeal(drawInput({ budget }), { catalog })).toEqual({
+      status: 'requires-ad',
+    })
+
+    const result = drawForMeal(drawInput({ budget }), {
+      rng: () => 0,
+      catalog,
+      adCompleted: true,
+    })
+    expect(result.status).toBe('drawn')
+    if (result.status !== 'drawn') return
+    expect(result.source).toBe('ad')
+    expect(result.budget.adUsed).toBe(11)
+  })
 
   it('draws from base draws and keeps the candidate pool untouched', () => {
     const result = drawForMeal(drawInput(), { rng: () => 0, catalog })
@@ -169,15 +208,6 @@ describe('drawForMeal', () => {
     expect(result.budget.adUsed).toBe(1)
   })
 
-  it('blocks when base, tokens, and ads are all used up', () => {
-    expect(
-      drawForMeal(
-        drawInput({ budget: { baseUsed: 2, adUsed: 3, checkedIn: false } }),
-        { catalog },
-      ),
-    ).toEqual({ status: 'blocked', reason: 'no-draws' })
-  })
-
   it('blocks drawing after the meal is checked in', () => {
     expect(
       drawForMeal(
@@ -201,9 +231,9 @@ describe('drawForMeal', () => {
     expect(result.pityTriggered).toBe(true)
   })
 
-  it('never repeats a combo within the same meal', () => {
+  it('never repeats a combo within the same round', () => {
     const result = drawForMeal(
-      drawInput({ pityCount: 4, candidateComboIds: ['c_r'] }),
+      drawInput({ pityCount: 4, drawnComboIds: ['c_r'] }),
       { rng: () => 0, catalog },
     )
 
@@ -212,28 +242,47 @@ describe('drawForMeal', () => {
 
     expect(result.combo.id).toBe('c_sr')
     expect(result.combo.rarity).toBe('SR')
+    expect(result.shuffled).toBe(false)
+    expect(result.nextDrawnComboIds).toEqual(['c_r', 'c_sr'])
   })
 
-  it('does not consume a draw or read rng when the meal pool is exhausted', () => {
-    let calls = 0
-    const rng: Rng = () => {
-      calls += 1
-      return 0
-    }
+  it('reshuffles an exhausted round without immediately repeating the previous combo', () => {
+    const result = drawForMeal(
+      drawInput({ drawnComboIds: ['c_r', 'c_sr'] }),
+      { rng: () => 0, catalog },
+    )
 
-    expect(
-      drawForMeal(drawInput({ candidateComboIds: ['c_r', 'c_sr'] }), {
-        rng,
-        catalog,
-      }),
-    ).toEqual({ status: 'blocked', reason: 'pool-exhausted' })
-    expect(calls).toBe(0)
+    expect(result.status).toBe('drawn')
+    if (result.status !== 'drawn') return
+
+    expect(result.combo.id).toBe('c_r')
+    expect(result.shuffled).toBe(true)
+    expect(result.singleCandidate).toBe(false)
+    expect(result.nextDrawnComboIds).toEqual(['c_r'])
+    expect(result.budget.baseUsed).toBe(1)
   })
 
-  it('blocks when the catalog has no combos for the meal', () => {
+  it('never blocks when the meal pool has a single combo', () => {
+    const single = [combo('c_r', 'R')]
+
+    const result = drawForMeal(
+      drawInput({ drawnComboIds: ['c_r'] }),
+      { rng: () => 0, catalog: single },
+    )
+
+    expect(result.status).toBe('drawn')
+    if (result.status !== 'drawn') return
+
+    expect(result.combo.id).toBe('c_r')
+    expect(result.shuffled).toBe(true)
+    expect(result.singleCandidate).toBe(true)
+    expect(result.nextDrawnComboIds).toEqual(['c_r'])
+  })
+
+  it('only blocks when the catalog has no combos for the meal', () => {
     expect(
       drawForMeal(drawInput({ meal: 'dinner' }), { rng: () => 0, catalog }),
-    ).toEqual({ status: 'blocked', reason: 'pool-exhausted' })
+    ).toEqual({ status: 'blocked', reason: 'pool-empty' })
   })
 })
 
@@ -295,7 +344,7 @@ describe('redrawComponent', () => {
         rng: () => 0,
         dishCatalog: onlyMismatch,
       }),
-    ).toEqual({ status: 'no-candidate', reason: 'empty-pool' })
+    ).toEqual({ status: 'no-candidate', reason: 'single-candidate' })
   })
 
   it('blocks when the component is missing, discarded, or custom', () => {
@@ -337,13 +386,19 @@ describe('redrawComponent', () => {
     ).toEqual({ status: 'blocked', reason: 'checked-in' })
   })
 
-  it('blocks with no draws left, without consuming anything', () => {
-    expect(
-      redrawComponent(
-        redrawInput({ budget: { baseUsed: 2, adUsed: 3, checkedIn: false } }),
-        { dishCatalog: [...fixtureDishById.values()] },
-      ),
-    ).toEqual({ status: 'blocked', reason: 'no-draws' })
+  it('keeps redrawing via ads after the old ad cap', () => {
+    const input = redrawInput({
+      budget: { baseUsed: 2, adUsed: 10, checkedIn: false },
+    })
+    const options = { dishCatalog: [...fixtureDishById.values()] }
+
+    expect(redrawComponent(input, options)).toEqual({ status: 'requires-ad' })
+
+    const result = redrawComponent(input, { ...options, adCompleted: true })
+    expect(result.status).toBe('redrawn')
+    if (result.status !== 'redrawn') return
+    expect(result.source).toBe('ad')
+    expect(result.budget.adUsed).toBe(11)
   })
 
   it('requires a completed ad when the next source is an ad', () => {
@@ -361,7 +416,7 @@ describe('redrawComponent', () => {
     expect(result.budget.adUsed).toBe(1)
   })
 
-  it('never consumes a draw or changes pity when pity has no SR+ candidate', () => {
+  it('falls back to normal weights when pity has no SR+ candidate', () => {
     let calls = 0
     const rng: Rng = () => {
       calls += 1
@@ -373,11 +428,13 @@ describe('redrawComponent', () => {
       dishCatalog: [targetDish, altStaple],
     })
 
-    expect(result).toEqual({
-      status: 'no-candidate',
-      reason: 'pity-unavailable',
-    })
-    expect(calls).toBe(0)
+    expect(result.status).toBe('redrawn')
+    if (result.status !== 'redrawn') return
+    expect(result.component.rarity).toBe('R')
+    expect(result.pityTriggered).toBe(false)
+    expect(result.pityCount).toBe(6)
+    expect(result.budget.baseUsed).toBe(1)
+    expect(calls).toBe(2)
   })
 
   it('draws from guaranteed rarities when pity is active', () => {
@@ -412,6 +469,85 @@ describe('redrawComponent', () => {
     expect(result.pityCount).toBe(5)
     expect(result.budget).toEqual(budget)
     expect(result.component.rarity).toBe('R')
+  })
+
+  it('excludes dishes already seen in the same component slot', () => {
+    const dishes = [targetDish, altStaple, altStapleSr]
+
+    const first = redrawComponent(redrawInput(), {
+      rng: () => 0,
+      dishCatalog: dishes,
+    })
+    expect(first.status).toBe('redrawn')
+    if (first.status !== 'redrawn') return
+    expect(first.component.dishId).toBe('alt_staple')
+    expect(first.component.seenDishIds).toEqual(['target', 'alt_staple'])
+
+    const second = redrawComponent(
+      {
+        ...redrawInput(),
+        candidate: first.candidate,
+        componentId: first.component.id,
+      },
+      { rng: () => 0, dishCatalog: dishes },
+    )
+    expect(second.status).toBe('redrawn')
+    if (second.status !== 'redrawn') return
+    expect(second.component.dishId).toBe('alt_staple_sr')
+    expect(second.component.seenDishIds).toEqual([
+      'target',
+      'alt_staple',
+      'alt_staple_sr',
+    ])
+    expect(second.shuffled).toBe(false)
+  })
+
+  it('reshuffles an exhausted slot, keeps the current dish, and avoids the previous dish', () => {
+    const dishes = [targetDish, altStaple, altStapleSr]
+
+    const first = redrawComponent(redrawInput(), {
+      rng: () => 0,
+      dishCatalog: dishes,
+    })
+    if (first.status !== 'redrawn') throw new Error('first redraw failed')
+
+    const second = redrawComponent(
+      {
+        ...redrawInput(),
+        candidate: first.candidate,
+        componentId: first.component.id,
+      },
+      { rng: () => 0, dishCatalog: dishes },
+    )
+    if (second.status !== 'redrawn') throw new Error('second redraw failed')
+
+    const third = redrawComponent(
+      {
+        ...redrawInput(),
+        candidate: second.candidate,
+        componentId: second.component.id,
+      },
+      { rng: () => 0, dishCatalog: dishes },
+    )
+
+    expect(third.status).toBe('redrawn')
+    if (third.status !== 'redrawn') return
+    expect(third.shuffled).toBe(true)
+    expect(third.component.dishId).not.toBe('alt_staple_sr')
+    expect(third.component.dishId).not.toBe('alt_staple')
+    expect(third.component.seenDishIds).toEqual(['alt_staple_sr', 'target'])
+  })
+
+  it('never dead-ends when the category has only the current dish', () => {
+    const result = redrawComponent(redrawInput(), {
+      dishCatalog: [targetDish],
+    })
+
+    expect(result).toEqual({
+      status: 'no-candidate',
+      reason: 'single-candidate',
+    })
+    expect(redrawInput().budget.baseUsed).toBe(0)
   })
 
   it('gives the replacement a fresh unique component id', () => {

@@ -7,7 +7,7 @@ import {
   stampFirstTierMessage,
   stampNextTierMessage,
 } from '../../copy'
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import type { StampBookEntry } from '../../selectors/stampBookView'
 import { ModalShell } from '../gameplay/ModalShell'
 import { DishStamp } from './DishStamp'
@@ -37,9 +37,42 @@ export function StampDetailModal({
 
   const editable = entry.isCustom && !entry.archived
   const kcalText =
-    entry.kcal === null || (!entry.collected && !entry.isCustom)
+    entry.kcal === null
       ? '—'
-      : `${formatKcal(entry.kcal, showCalories)} kcal`
+      : formatKcalWithUnit(entry.kcal, showCalories)
+
+  if (entry.masked) {
+    return (
+      <ModalShell
+        variant="sheet"
+        title={entry.name}
+        className="stamp-detail-modal"
+        onClose={onClose}
+        footer={
+          <button
+            type="button"
+            className="primary-button"
+            onClick={onClose}
+          >
+            收好图鉴
+          </button>
+        }
+      >
+        <div className="stamp-detail stamp-detail--locked">
+          <div className="stamp-detail__hero">
+            <DishStamp
+              dish={entry}
+              count={0}
+              tier={null}
+              size="lg"
+              locked
+            />
+            <p className="stamp-detail__locked">吃一次就解锁</p>
+          </div>
+        </div>
+      </ModalShell>
+    )
+  }
 
   return (
     <ModalShell
@@ -92,6 +125,7 @@ export function StampDetailModal({
             tier={entry.tier}
             dateLabel={entry.collected ? entry.dateLabel : undefined}
             size="lg"
+            locked={entry.isCustom ? false : undefined}
           />
           {entry.archived && (
             <p className="stamp-detail__locked">
@@ -142,8 +176,11 @@ export function StampDetailModal({
                   <span className="stamp-ingredient__name">
                     {ingredient.name}
                     <small className="stamp-ingredient__meta">
-                      {formatKcal(ingredient.kcalPer100g, showCalories)}{' '}
-                      kcal / 100g
+                      {formatKcalWithUnit(
+                        ingredient.kcalPer100g,
+                        showCalories,
+                      )}{' '}
+                      / 100g
                     </small>
                   </span>
                   <span className="stamp-ingredient__grams">

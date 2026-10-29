@@ -6,6 +6,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  // 固定端口：localStorage 按 origin 隔离，端口漂移会让用户以为数据丢了。
+  // 不要设置 host，`localhost` 与 `127.0.0.1` 也是不同 origin。
+  server: { port: 5173, strictPort: true },
+  preview: { port: 4173, strictPort: true },
   plugins: [
     react(),
     VitePWA({
@@ -19,13 +23,15 @@ export default defineConfig({
         id: '/',
         name: '便当手帐 · 每日抽卡饮食打卡',
         short_name: '便当手帐',
-        description: '每日三餐抽卡决定吃什么，打卡收集 60 道可爱菜品印章。',
+        description: '每日三餐抽卡决定吃什么，打卡收集 94 道可爱菜品印章。',
         lang: 'zh-CN',
         dir: 'ltr',
         start_url: '/',
         scope: '/',
         display: 'standalone',
         orientation: 'portrait',
+        // 静态回退：安装 / 首屏时用可爱的纸色；运行时由
+        // meta[name="theme-color"] 跟随 settings.theme 更新。
         background_color: '#FFF6E8',
         theme_color: '#FFF6E8',
         icons: [

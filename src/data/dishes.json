@@ -10,6 +10,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "cooked_rice",
@@ -37,10 +39,12 @@
         "breakfast",
         "lunch"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "sweet_potato",
-          "grams": 200
+          "grams": 120
         }
       ],
       "image": "/images/dishes/steamed_sweet_potato.png",
@@ -65,6 +69,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "egg",
@@ -91,14 +97,16 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "oats",
-          "grams": 40
+          "grams": 30
         },
         {
           "ingredientId": "milk",
-          "grams": 200
+          "grams": 150
         }
       ],
       "image": "/images/dishes/oatmeal_milk.png",
@@ -121,10 +129,12 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "whole_wheat_bread",
-          "grams": 80
+          "grams": 70
         }
       ],
       "image": "/images/dishes/whole_wheat_toast.png",
@@ -148,6 +158,8 @@
         "breakfast",
         "lunch"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "corn",
@@ -175,14 +187,20 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "noodles",
-          "grams": 250
+          "grams": 320
         },
         {
           "ingredientId": "soy_sauce",
           "grams": 5
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 60
         }
       ],
       "image": "/images/dishes/plain_noodles.png",
@@ -192,7 +210,7 @@
         "timeMinutes": 10,
         "steps": [
           "水开下面条，用筷子轻轻拨散",
-          "中火煮至面条没有硬芯",
+          "中火煮至面条和鸡蛋熟透",
           "捞出加清汤和生抽调味"
         ]
       }
@@ -205,6 +223,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "rice",
@@ -229,10 +249,10 @@
       "rarity": "R",
       "category": "staple",
       "meals": [
-        "breakfast",
-        "lunch",
-        "dinner"
+        "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "steamed_bun",
@@ -259,6 +279,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "pumpkin",
@@ -287,10 +309,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "banana",
-          "grams": 150
+          "grams": 100
         }
       ],
       "image": "/images/dishes/banana.png",
@@ -315,10 +339,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "apple",
-          "grams": 200
+          "grams": 150
         }
       ],
       "image": "/images/dishes/apple.png",
@@ -341,10 +367,12 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "yogurt",
-          "grams": 200
+          "grams": 150
         }
       ],
       "image": "/images/dishes/plain_yogurt.png",
@@ -367,6 +395,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "soy_milk",
@@ -395,6 +425,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "cucumber",
@@ -426,6 +458,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "yam",
@@ -453,6 +487,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "tomato",
@@ -488,10 +524,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "chicken_breast",
-          "grams": 120
+          "grams": 150
         },
         {
           "ingredientId": "lettuce",
@@ -531,6 +569,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "shiitake",
@@ -566,6 +606,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "shrimp",
@@ -601,6 +643,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "lean_beef",
@@ -608,7 +652,7 @@
         },
         {
           "ingredientId": "cooked_rice",
-          "grams": 150
+          "grams": 180
         },
         {
           "ingredientId": "broccoli",
@@ -644,6 +688,8 @@
         "breakfast",
         "lunch"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "salmon",
@@ -675,10 +721,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "tofu",
-          "grams": 150
+          "grams": 180
         },
         {
           "ingredientId": "shiitake",
@@ -713,6 +761,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "chicken_thigh",
@@ -743,18 +793,20 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "banana",
-          "grams": 100
+          "grams": 80
         },
         {
           "ingredientId": "oats",
-          "grams": 40
+          "grams": 30
         },
         {
           "ingredientId": "yogurt",
-          "grams": 100
+          "grams": 80
         }
       ],
       "image": "/images/dishes/banana_oat_cup.png",
@@ -777,14 +829,16 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "avocado",
-          "grams": 80
+          "grams": 60
         },
         {
           "ingredientId": "whole_wheat_bread",
-          "grams": 80
+          "grams": 70
         }
       ],
       "image": "/images/dishes/avocado_toast.png",
@@ -808,6 +862,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "corn",
@@ -847,14 +903,16 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "enoki",
-          "grams": 100
+          "grams": 250
         },
         {
           "ingredientId": "lean_beef",
-          "grams": 120
+          "grams": 200
         },
         {
           "ingredientId": "soy_sauce",
@@ -882,6 +940,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "spinach",
@@ -917,6 +977,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "chicken_thigh",
@@ -960,6 +1022,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "beef_brisket",
@@ -999,6 +1063,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "salmon",
@@ -1034,6 +1100,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "shrimp",
@@ -1073,6 +1141,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "cod",
@@ -1112,6 +1182,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "tofu",
@@ -1155,6 +1227,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "lean_beef",
@@ -1194,6 +1268,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "pumpkin",
@@ -1229,6 +1305,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "whole_wheat_bread",
@@ -1276,6 +1354,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "dark_chocolate",
@@ -1314,6 +1394,8 @@
       "meals": [
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "fried_chicken",
@@ -1348,6 +1430,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "youtiao",
@@ -1374,18 +1458,20 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "cooked_rice",
-          "grams": 250
+          "grams": 120
         },
         {
           "ingredientId": "century_egg",
-          "grams": 50
+          "grams": 35
         },
         {
           "ingredientId": "lean_pork",
-          "grams": 50
+          "grams": 35
         }
       ],
       "image": "/images/dishes/century_egg_pork_porridge.png",
@@ -1408,22 +1494,24 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "flour",
-          "grams": 60
-        },
-        {
-          "ingredientId": "egg",
           "grams": 50
         },
         {
+          "ingredientId": "egg",
+          "grams": 40
+        },
+        {
           "ingredientId": "milk",
-          "grams": 30
+          "grams": 20
         },
         {
           "ingredientId": "olive_oil",
-          "grams": 5
+          "grams": 4
         }
       ],
       "image": "/images/dishes/egg_pancake.png",
@@ -1446,6 +1534,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "xiaolongbao",
@@ -1472,6 +1562,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "dumpling",
@@ -1498,6 +1590,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "tofu_pudding",
@@ -1529,6 +1623,8 @@
         "breakfast",
         "lunch"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "wonton",
@@ -1559,10 +1655,12 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "milk",
-          "grams": 250
+          "grams": 150
         }
       ],
       "image": "/images/dishes/milk.png",
@@ -1585,6 +1683,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "egg",
@@ -1615,6 +1715,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "yogurt",
@@ -1649,6 +1751,8 @@
       "meals": [
         "breakfast"
       ],
+      "providesStaple": true,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "taro",
@@ -1676,10 +1780,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "cooked_rice",
-          "grams": 250
+          "grams": 300
         },
         {
           "ingredientId": "egg",
@@ -1715,6 +1821,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "noodles",
@@ -1754,10 +1862,12 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": true,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "sweet_potato_noodles",
-          "grams": 200
+          "grams": 280
         },
         {
           "ingredientId": "peanut",
@@ -1766,6 +1876,10 @@
         {
           "ingredientId": "cucumber",
           "grams": 30
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
         }
       ],
       "image": "/images/dishes/hot_sour_noodles.png",
@@ -1789,6 +1903,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "chicken_breast",
@@ -1828,6 +1944,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "lean_pork",
@@ -1867,6 +1985,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "sea_bass",
@@ -1902,6 +2022,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": false,
       "ingredients": [
         {
           "ingredientId": "bok_choy",
@@ -1933,6 +2055,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "winter_melon",
@@ -1964,6 +2088,8 @@
         "lunch",
         "dinner"
       ],
+      "providesStaple": false,
+      "providesProtein": true,
       "ingredients": [
         {
           "ingredientId": "tomato",
@@ -1987,6 +2113,1518 @@
           "番茄切块，鸡蛋打散",
           "水开下番茄煮软",
           "淋入蛋液，煮至熟透"
+        ]
+      }
+    },
+    {
+      "id": "zucchini_egg",
+      "name": "西葫芦炒鸡蛋",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "zucchini",
+          "grams": 200
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 100
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/zucchini_egg.png",
+      "tip": "清爽下饭，鸡蛋补蛋白。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 10,
+        "steps": [
+          "西葫芦切片，鸡蛋打散",
+          "热锅下油，炒蛋至熟透",
+          "下西葫芦炒软，加盐调味"
+        ]
+      }
+    },
+    {
+      "id": "wuzhimaotao_chicken_soup",
+      "name": "五指毛桃炖鸡汤",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "wuzhimaotao",
+          "grams": 15
+        },
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 150
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/wuzhimaotao_chicken_soup.png",
+      "tip": "五指毛桃是广东常用的煲汤根茎。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 90,
+        "steps": [
+          "五指毛桃冲洗，浸泡10分钟",
+          "鸡腿肉切块，焯水后洗净",
+          "加水炖至鸡肉熟透，加盐"
+        ]
+      }
+    },
+    {
+      "id": "loofah_beef_ball",
+      "name": "水瓜炒牛筋丸",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "loofah",
+          "grams": 250
+        },
+        {
+          "ingredientId": "beef_tendon_ball",
+          "grams": 120
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/loofah_beef_ball.png",
+      "tip": "水瓜就是广东丝瓜，清甜多汁。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "水瓜去皮切块，牛筋丸解冻",
+          "热锅下油，炒牛筋丸至熟透",
+          "下水瓜炒软，加生抽调味"
+        ]
+      }
+    },
+    {
+      "id": "eggplant_pot",
+      "name": "茄子煲",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "eggplant",
+          "grams": 250
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 50
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/eggplant_pot.png",
+      "tip": "茄子吸饱汤汁，拌饭很香。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 25,
+        "steps": [
+          "茄子切条，瘦肉切末",
+          "热锅炒肉末至熟透",
+          "下茄子和生抽，小火焖软"
+        ]
+      }
+    },
+    {
+      "id": "braised_winter_melon",
+      "name": "红烧冬瓜",
+      "rarity": "R",
+      "category": "veg",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "winter_melon",
+          "grams": 300
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 30
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/braised_winter_melon.png",
+      "tip": "冬瓜软烂清甜，汤汁别浪费。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 20,
+        "steps": [
+          "冬瓜去皮切块，瘦肉切末",
+          "热锅炒肉末至熟透",
+          "下冬瓜和生抽，焖至软烂"
+        ]
+      }
+    },
+    {
+      "id": "cola_chicken_wings",
+      "name": "可乐鸡翅",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "chicken_wing",
+          "grams": 200
+        },
+        {
+          "ingredientId": "cola",
+          "grams": 100
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 10
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/cola_chicken_wings.png",
+      "tip": "可乐鸡翅甜香，偶尔吃一次就好。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 25,
+        "steps": [
+          "鸡翅划两刀，焯水洗净",
+          "加可乐和生抽，炖至熟透",
+          "大火收汁，撒上葱花"
+        ]
+      }
+    },
+    {
+      "id": "corn_rib_soup",
+      "name": "玉米胡萝卜排骨汤",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "corn",
+          "grams": 100
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 80
+        },
+        {
+          "ingredientId": "pork_ribs",
+          "grams": 100
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/corn_rib_soup.png",
+      "tip": "排骨汤清甜，玉米胡萝卜都好吃。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 60,
+        "steps": [
+          "排骨焯水，玉米胡萝卜切段",
+          "加清水炖排骨至熟透",
+          "下玉米胡萝卜再炖20分钟"
+        ]
+      }
+    },
+    {
+      "id": "wood_ear_egg",
+      "name": "木耳胡萝卜芹菜炒蛋",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "wood_ear",
+          "grams": 50
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 60
+        },
+        {
+          "ingredientId": "celery",
+          "grams": 100
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 100
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/wood_ear_egg.png",
+      "tip": "木耳脆、芹菜香，口感很丰富。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "木耳泡发，芹菜胡萝卜切段",
+          "鸡蛋打散，热锅炒至熟透",
+          "下蔬菜翻炒，加盐调味"
+        ]
+      }
+    },
+    {
+      "id": "tomato_brisket",
+      "name": "番茄牛腩",
+      "rarity": "SSR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "beef_brisket",
+          "grams": 150
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 200
+        },
+        {
+          "ingredientId": "onion",
+          "grams": 50
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/tomato_brisket.png",
+      "tip": "牛腩炖到软烂，番茄汤汁浓郁。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 90,
+        "steps": [
+          "牛腩切块，焯水后洗净",
+          "加番茄洋葱炖至牛腩熟透",
+          "加生抽收汁，撒葱花"
+        ]
+      }
+    },
+    {
+      "id": "button_mushroom_wings",
+      "name": "口蘑鸡翅",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "button_mushroom",
+          "grams": 150
+        },
+        {
+          "ingredientId": "chicken_wing",
+          "grams": 200
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/button_mushroom_wings.png",
+      "tip": "口蘑吸汁，鸡翅外香里嫩。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡翅划刀，口蘑切片",
+          "热锅下油，煎鸡翅至熟透",
+          "下口蘑和生抽，翻炒收汁"
+        ]
+      }
+    },
+    {
+      "id": "braised_pork_trotter",
+      "name": "红烧猪蹄",
+      "rarity": "SSR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "pork_trotter",
+          "grams": 250
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 10
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/braised_pork_trotter.png",
+      "tip": "猪蹄软糯，胶原满满，适量就好。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 90,
+        "steps": [
+          "猪蹄焯水，刮净表面",
+          "加生抽和香料炖至熟透",
+          "大火收汁，撒上葱花"
+        ]
+      }
+    },
+    {
+      "id": "sweet_sour_ribs",
+      "name": "糖醋排骨",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "pork_ribs",
+          "grams": 200
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 20
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 20
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/sweet_sour_ribs.png",
+      "tip": "糖醋排骨酸甜开胃，偶尔吃一次。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 30,
+        "steps": [
+          "排骨焯水，裹一层面粉",
+          "热锅下油，炒排骨至熟透",
+          "加蜂蜜和醋，翻匀收汁"
+        ]
+      }
+    },
+    {
+      "id": "corn_shrimp_cake",
+      "name": "玉米虾饼",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "shrimp",
+          "grams": 120
+        },
+        {
+          "ingredientId": "corn",
+          "grams": 80
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 30
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 30
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/corn_shrimp_cake.png",
+      "tip": "虾饼外脆里嫩，玉米粒甜甜的。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 15,
+        "steps": [
+          "虾仁剁碎，加玉米和蛋液",
+          "加面粉拌成小饼",
+          "平底锅煎至两面熟透"
+        ]
+      }
+    },
+    {
+      "id": "yu_xiang_pork",
+      "name": "鱼香肉丝",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "lean_pork",
+          "grams": 120
+        },
+        {
+          "ingredientId": "wood_ear",
+          "grams": 30
+        },
+        {
+          "ingredientId": "carrot",
+          "grams": 40
+        },
+        {
+          "ingredientId": "bell_pepper",
+          "grams": 30
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/yu_xiang_pork.png",
+      "tip": "鱼香肉丝没有鱼，但很下饭。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "瘦肉切丝，木耳胡萝卜切丝",
+          "热锅炒肉丝至熟透",
+          "下配菜和调料，翻炒收汁"
+        ]
+      }
+    },
+    {
+      "id": "oyster_lettuce",
+      "name": "蚝油生菜",
+      "rarity": "R",
+      "category": "veg",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "lettuce",
+          "grams": 250
+        },
+        {
+          "ingredientId": "oyster_sauce",
+          "grams": 10
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/oyster_lettuce.png",
+      "tip": "生菜脆嫩，蚝油鲜香。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 8,
+        "steps": [
+          "生菜洗净，沥干水分",
+          "热锅下油，爆香蒜末",
+          "下生菜炒软，淋蚝油"
+        ]
+      }
+    },
+    {
+      "id": "rice_roll",
+      "name": "肠粉",
+      "rarity": "R",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "providesStaple": true,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "rice_flour",
+          "grams": 80
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "shrimp",
+          "grams": 30
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/rice_roll.png",
+      "tip": "肠粉滑嫩，早餐摊的熟悉味道。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 20,
+        "steps": [
+          "粘米粉加水调成米浆",
+          "米浆铺盘，加蛋液和虾仁",
+          "上锅蒸至蛋虾熟透",
+          "淋生抽，撒葱花"
+        ]
+      }
+    },
+    {
+      "id": "salt_pepper_wings",
+      "name": "椒盐鸡翅",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "chicken_wing",
+          "grams": 220
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 20
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/salt_pepper_wings.png",
+      "tip": "椒盐鸡翅咸香，偶尔吃一次。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡翅划刀，用生抽腌制",
+          "裹薄粉，平底锅煎至熟透",
+          "撒椒盐和蒜末，翻匀"
+        ]
+      }
+    },
+    {
+      "id": "scallion_braised_chicken",
+      "name": "葱油焖鸡",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 200
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 30
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 10
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/scallion_braised_chicken.png",
+      "tip": "葱油香气把鸡肉衬得很嫩。",
+      "cooking": {
+        "method": "炖",
+        "timeMinutes": 30,
+        "steps": [
+          "鸡腿肉切块，用生抽腌制",
+          "热锅下油，炒鸡肉至熟透",
+          "加葱段和少许水，焖5分钟"
+        ]
+      }
+    },
+    {
+      "id": "spicy_fish_slices",
+      "name": "香辣鱼片",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "sea_bass",
+          "grams": 200
+        },
+        {
+          "ingredientId": "chili_pepper",
+          "grams": 30
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 10
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/spicy_fish_slices.png",
+      "tip": "鱼片嫩滑，辣得过瘾。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 15,
+        "steps": [
+          "鲈鱼切片，用生抽腌制",
+          "鱼片裹薄粉，滑炒至熟透",
+          "加辣椒和蒜末，翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "cake",
+      "name": "蛋糕",
+      "rarity": "SR",
+      "category": "snack",
+      "meals": [
+        "breakfast",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "flour",
+          "grams": 25
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 40
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 20
+        },
+        {
+          "ingredientId": "butter",
+          "grams": 12
+        },
+        {
+          "ingredientId": "milk",
+          "grams": 15
+        }
+      ],
+      "image": "/images/dishes/cake.png",
+      "tip": "蛋糕松软，配茶刚好，别贪多。",
+      "cooking": {
+        "method": "烤",
+        "timeMinutes": 35,
+        "steps": [
+          "鸡蛋加蜂蜜打匀",
+          "筛入面粉和牛奶，拌成糊",
+          "倒入模具，烤至熟透"
+        ]
+      }
+    },
+    {
+      "id": "char_siu_bun",
+      "name": "叉烧包",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "providesStaple": true,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "char_siu",
+          "grams": 70
+        },
+        {
+          "ingredientId": "flour",
+          "grams": 70
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/char_siu_bun.png",
+      "tip": "叉烧包甜咸适口，趁热吃。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 25,
+        "steps": [
+          "叉烧切丁，加生抽拌匀",
+          "面粉加水揉面，包入馅料",
+          "上锅蒸至馅料熟透"
+        ]
+      }
+    },
+    {
+      "id": "taro_milk",
+      "name": "芋泥烤奶",
+      "rarity": "SR",
+      "category": "drink",
+      "meals": [
+        "breakfast",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "taro",
+          "grams": 100
+        },
+        {
+          "ingredientId": "milk",
+          "grams": 150
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 15
+        },
+        {
+          "ingredientId": "butter",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/taro_milk.png",
+      "tip": "芋泥烤奶绵密，像一杯热甜点。",
+      "cooking": {
+        "method": "烤",
+        "timeMinutes": 25,
+        "steps": [
+          "芋头蒸软，压成芋泥",
+          "加牛奶、蜂蜜和黄油拌匀",
+          "倒入烤碗，烤至表面微焦"
+        ]
+      }
+    },
+    {
+      "id": "garlic_ribs",
+      "name": "蒜香排骨",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "pork_ribs",
+          "grams": 200
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 20
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 8
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/garlic_ribs.png",
+      "tip": "蒜香排骨外酥里嫩，偶尔吃一次。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 25,
+        "steps": [
+          "排骨焯水，用生抽腌制",
+          "裹薄粉，煎至排骨熟透",
+          "撒蒜末翻匀，出锅"
+        ]
+      }
+    },
+    {
+      "id": "spicy_chicken_burger",
+      "name": "香辣鸡腿堡",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": true,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "burger_bun",
+          "grams": 100
+        },
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 120
+        },
+        {
+          "ingredientId": "lettuce",
+          "grams": 30
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 30
+        },
+        {
+          "ingredientId": "cheese",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/spicy_chicken_burger.png",
+      "tip": "香辣鸡腿堡，快餐日的快乐。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡腿肉用生抽腌制10分钟",
+          "平底锅煎至鸡肉熟透",
+          "汉堡胚夹入生菜番茄和鸡肉"
+        ]
+      }
+    },
+    {
+      "id": "orleans_chicken_burger",
+      "name": "奥尔良鸡腿堡",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": true,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "burger_bun",
+          "grams": 100
+        },
+        {
+          "ingredientId": "chicken_thigh",
+          "grams": 120
+        },
+        {
+          "ingredientId": "lettuce",
+          "grams": 30
+        },
+        {
+          "ingredientId": "tomato",
+          "grams": 30
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 8
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 8
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/orleans_chicken_burger.png",
+      "tip": "奥尔良风味，甜辣多汁。",
+      "cooking": {
+        "method": "煎",
+        "timeMinutes": 20,
+        "steps": [
+          "鸡腿肉用蜂蜜生抽腌制",
+          "平底锅煎至鸡肉熟透",
+          "汉堡胚夹入生菜番茄和鸡肉"
+        ]
+      }
+    },
+    {
+      "id": "egg_tart",
+      "name": "蛋挞",
+      "rarity": "SR",
+      "category": "snack",
+      "meals": [
+        "breakfast",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "egg_tart_shell",
+          "grams": 40
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 30
+        },
+        {
+          "ingredientId": "milk",
+          "grams": 30
+        },
+        {
+          "ingredientId": "honey",
+          "grams": 10
+        }
+      ],
+      "image": "/images/dishes/egg_tart.png",
+      "tip": "蛋挞酥皮掉渣，趁热吃。",
+      "cooking": {
+        "method": "烤",
+        "timeMinutes": 25,
+        "steps": [
+          "蛋挞皮放入模具",
+          "鸡蛋加牛奶蜂蜜搅匀",
+          "倒入挞皮，烤至蛋液熟透"
+        ]
+      }
+    },
+    {
+      "id": "big_meat_bun",
+      "name": "大肉包子",
+      "rarity": "SR",
+      "category": "staple",
+      "meals": [
+        "breakfast"
+      ],
+      "providesStaple": true,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "flour",
+          "grams": 100
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 60
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 10
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/big_meat_bun.png",
+      "tip": "大肉包子扎实，早餐很满足。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 30,
+        "steps": [
+          "面粉加水揉成面团",
+          "猪肉末加葱花和生抽拌匀",
+          "包好后上锅蒸至熟透"
+        ]
+      }
+    },
+    {
+      "id": "tofu_seafood_soup",
+      "name": "豆腐三鲜汤",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "tofu",
+          "grams": 100
+        },
+        {
+          "ingredientId": "shrimp",
+          "grams": 50
+        },
+        {
+          "ingredientId": "shiitake",
+          "grams": 30
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 30
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/tofu_seafood_soup.png",
+      "tip": "豆腐三鲜汤，鲜味来自虾和菇。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 15,
+        "steps": [
+          "豆腐切块，香菇切片",
+          "水开后下豆腐和虾仁",
+          "淋蛋液，煮至虾蛋熟透"
+        ]
+      }
+    },
+    {
+      "id": "steamed_pork_rice_flour",
+      "name": "粉蒸肉",
+      "rarity": "SSR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "pork_belly",
+          "grams": 120
+        },
+        {
+          "ingredientId": "rice_flour",
+          "grams": 25
+        },
+        {
+          "ingredientId": "sweet_potato",
+          "grams": 100
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/steamed_pork_rice_flour.png",
+      "tip": "粉蒸肉软糯，红薯吸了肉香。",
+      "cooking": {
+        "method": "蒸",
+        "timeMinutes": 60,
+        "steps": [
+          "五花肉切片，用生抽腌制",
+          "拌入粘米粉，铺在红薯上",
+          "上锅蒸至肉片熟透"
+        ]
+      }
+    },
+    {
+      "id": "celery_beef",
+      "name": "香芹炒牛肉",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "lean_beef",
+          "grams": 120
+        },
+        {
+          "ingredientId": "celery",
+          "grams": 150
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/celery_beef.png",
+      "tip": "香芹脆嫩，牛肉滑口。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "牛肉切片，用生抽腌制",
+          "热锅下油，炒牛肉至熟透",
+          "下香芹翻炒，加盐调味"
+        ]
+      }
+    },
+    {
+      "id": "chili_pork",
+      "name": "辣椒炒肉",
+      "rarity": "SR",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "chili_pepper",
+          "grams": 150
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 120
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/chili_pork.png",
+      "tip": "辣椒炒肉，米饭杀手。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "瘦肉切片，青辣椒切段",
+          "热锅炒肉片至熟透",
+          "下辣椒和生抽，翻炒均匀"
+        ]
+      }
+    },
+    {
+      "id": "loofah_soup",
+      "name": "丝瓜汤",
+      "rarity": "R",
+      "category": "soup",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "loofah",
+          "grams": 250
+        },
+        {
+          "ingredientId": "egg",
+          "grams": 50
+        },
+        {
+          "ingredientId": "scallion",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 3
+        }
+      ],
+      "image": "/images/dishes/loofah_soup.png",
+      "tip": "丝瓜汤清甜，蛋花轻轻飘。",
+      "cooking": {
+        "method": "煮",
+        "timeMinutes": 10,
+        "steps": [
+          "丝瓜去皮切块",
+          "水开后下丝瓜煮软",
+          "淋蛋液，煮至蛋花熟透"
+        ]
+      }
+    },
+    {
+      "id": "snow_pea",
+      "name": "清炒荷兰豆",
+      "rarity": "R",
+      "category": "veg",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": false,
+      "ingredients": [
+        {
+          "ingredientId": "snow_pea",
+          "grams": 200
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 5
+        }
+      ],
+      "image": "/images/dishes/snow_pea.png",
+      "tip": "荷兰豆脆生生，蒜香清爽。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 8,
+        "steps": [
+          "荷兰豆去筋，洗净沥干",
+          "热锅下油，爆香蒜末",
+          "下荷兰豆炒至断生"
+        ]
+      }
+    },
+    {
+      "id": "mushroom_pork",
+      "name": "香菇炒肉",
+      "rarity": "R",
+      "category": "main",
+      "meals": [
+        "lunch",
+        "dinner"
+      ],
+      "providesStaple": false,
+      "providesProtein": true,
+      "ingredients": [
+        {
+          "ingredientId": "shiitake",
+          "grams": 100
+        },
+        {
+          "ingredientId": "lean_pork",
+          "grams": 100
+        },
+        {
+          "ingredientId": "garlic",
+          "grams": 5
+        },
+        {
+          "ingredientId": "soy_sauce",
+          "grams": 5
+        },
+        {
+          "ingredientId": "olive_oil",
+          "grams": 8
+        }
+      ],
+      "image": "/images/dishes/mushroom_pork.png",
+      "tip": "香菇炒肉，家常又下饭。",
+      "cooking": {
+        "method": "炒",
+        "timeMinutes": 12,
+        "steps": [
+          "香菇切片，瘦肉切片",
+          "热锅炒肉片至熟透",
+          "下香菇和生抽，翻炒收汁"
         ]
       }
     }

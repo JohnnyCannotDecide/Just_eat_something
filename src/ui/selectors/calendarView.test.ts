@@ -164,8 +164,26 @@ describe('buildDayDetailView', () => {
     )
   })
 
-  it('hides calories for guests but keeps the record', () => {
+  it('shows the final manual combo name frozen in the check-in snapshot', () => {
+    const data = makeData()
+    const renamed: ComboCandidateSnapshot = {
+      ...soy,
+      name: '油条豆浆早安',
+      nameSource: 'manual',
+      manualName: '油条豆浆早安',
+    }
+    setMeal(data, DAY, 'breakfast', renamed, {
+      checkedIn: true,
+      calories: calcMealCalories(renamed.components),
+    })
+
+    const breakfast = buildDayDetailView(data, DAY, DAY).meals[0]!
+    expect(breakfast.selectedCombo?.name).toBe('油条豆浆早安')
+  })
+
+  it('hides calories when the switch is off but keeps the record', () => {
     const data = makeData(false)
+    data.settings.showCalories = false
     setMeal(data, DAY, 'dinner', soy, {
       checkedIn: true,
       calories: 520,
@@ -177,6 +195,23 @@ describe('buildDayDetailView', () => {
     expect(view.showCalories).toBe(false)
     expect(formatKcal(dinner.calories, view.showCalories)).toBe('?')
     expect(formatKcal(view.dayCalories, view.showCalories)).toBe('?')
+    expect(dinner.selectedCombo?.name).toBe(soy.name)
+  })
+
+  it('shows calories for guests when the switch is on', () => {
+    const data = makeData(false)
+    data.settings.showCalories = true
+    setMeal(data, DAY, 'dinner', soy, {
+      checkedIn: true,
+      calories: 520,
+    })
+
+    const view = buildDayDetailView(data, DAY, DAY)
+    const dinner = view.meals[2]!
+
+    expect(view.showCalories).toBe(true)
+    expect(formatKcal(dinner.calories, view.showCalories)).toBe('520')
+    expect(formatKcal(view.dayCalories, view.showCalories)).toBe('520')
     expect(dinner.selectedCombo?.name).toBe(soy.name)
   })
 

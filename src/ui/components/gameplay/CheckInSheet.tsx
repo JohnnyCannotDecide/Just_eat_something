@@ -6,7 +6,7 @@ import type {
   MealComponentSnapshot,
 } from '@/core/types'
 
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import {
   collectDraftUpdates,
   comboFieldError,
@@ -37,6 +37,8 @@ interface CheckInSheetProps {
   mealLabel: string
   candidate: ComboCandidateSnapshot
   pending: boolean
+  /** 午餐缺主食的软提示；不阻止打卡。 */
+  stapleHint?: boolean
   showCalories: boolean
   error: string | null
   onClose: () => void
@@ -48,6 +50,7 @@ export function CheckInSheet({
   mealLabel,
   candidate,
   pending,
+  stapleHint = false,
   showCalories,
   error,
   onClose,
@@ -173,8 +176,7 @@ export function CheckInSheet({
         <div className="checkin-foot">
           <div className="checkin-total">
             <span className="checkin-total__label">合计</span>
-            <strong>{formatKcal(calories, showCalories)}</strong>
-            <span className="checkin-total__unit">kcal</span>
+            <strong>{formatKcalWithUnit(calories, showCalories)}</strong>
             <span className="checkin-total__hint">
               打卡后送 {TOKEN_REWARDS.formalDish} 张抽卡券
             </span>
@@ -198,6 +200,12 @@ export function CheckInSheet({
       {errors.form && (
         <p className="form-error" role="alert">
           {errors.form}
+        </p>
+      )}
+
+      {stapleHint && (
+        <p className="sheet-note" role="status">
+          这一餐主食不够哦
         </p>
       )}
 
@@ -300,11 +308,11 @@ export function CheckInSheet({
                                 {ingredient.name}
                               </label>
                               <span>
-                                {formatKcal(
+                                {formatKcalWithUnit(
                                   ingredient.kcalPer100g,
                                   showCalories,
                                 )}{' '}
-                                kcal / 100g
+                                / 100g
                               </span>
                             </div>
                             <div className="ingredient-row__input">

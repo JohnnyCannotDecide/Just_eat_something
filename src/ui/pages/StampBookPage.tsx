@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react'
-import type { CSSProperties } from 'react'
-
-import { STAMP_TIERS, STAMP_TIER_META } from '@/config/gameConfig'
+import { STAMP_TIERS } from '@/config/gameConfig'
 import {
   hasAnySnapshotReference,
   hasCheckInRecords,
@@ -17,7 +15,7 @@ import { CustomDishSheet } from '../components/stamp/CustomDishSheet'
 import { DishStamp } from '../components/stamp/DishStamp'
 import { StampDetailModal } from '../components/stamp/StampDetailModal'
 import { stampBookCardLabel } from '../copy'
-import { isCaloriesVisible } from '../formatKcal'
+import { DISH_CATEGORY_EMOJI } from '../dishEmoji'
 import { buildStampBookView } from '../selectors/stampBookView'
 import type { StampBookFilter } from '../selectors/stampBookView'
 
@@ -37,6 +35,7 @@ export function StampBookPage() {
   const showToast = useUiStore((state) => state.showToast)
 
   const [filter, setFilter] = useState<StampBookFilter>('all')
+  const [query, setQuery] = useState('')
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null)
   const [sheet, setSheet] = useState<SheetState>(null)
   const [deleteTarget, setDeleteTarget] = useState<CustomDish | null>(null)
@@ -52,8 +51,10 @@ export function StampBookPage() {
           customDishes: data.customDishes,
         },
         filter,
+        undefined,
+        query,
       ),
-    [data.customDishes, data.stamps, filter],
+    [data.customDishes, data.stamps, filter, query],
   )
 
   const selectedEntry = selectedDishId
@@ -130,8 +131,10 @@ export function StampBookPage() {
     }
   }
 
-  const emptyHint =
-    filter === 'collected'
+  const searching = query.trim().length > 0
+  const emptyHint = searching
+    ? '没有找到匹配的菜谱，换个关键词试试。'
+    : filter === 'collected'
       ? '还没有收集到官方菜，去今日页抽一抽吧。'
       : '还没有自制菜谱，点右上角的 + 记一道。'
 
@@ -216,33 +219,41 @@ export function StampBookPage() {
           ))}
         </div>
 
+        <label className="stamp-search">
+          <span className="sr-only">搜索图鉴</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="搜已收集或自制菜谱"
+            aria-label="搜索图鉴"
+          />
+        </label>
+
         {view.entries.length === 0 ? (
           <p className="stamp-book__hint">{emptyHint}</p>
         ) : (
           <ul className="stamp-book-grid">
             {view.entries.map((entry) => {
-              const style =
-                entry.collected && entry.tier
-                  ? ({
-                      '--stamp-color': STAMP_TIER_META[entry.tier].color,
-                      '--stamp-soft': STAMP_TIER_META[entry.tier].soft,
-                    } as CSSProperties)
-                  : undefined
-
               return (
                 <li key={entry.id}>
                   <button
                     type="button"
                     className={`stamp-book-card${
-                      entry.collected ? ' is-collected' : ' is-locked'
-                    }${entry.archived ? ' is-archived' : ''}`}
-                    style={style}
+                      entry.collected ? ' is-collected' : ''
+                    }${entry.masked ? ' is-locked' : ''}${
+                      entry.archived ? ' is-archived' : ''
+                    }`}
+                    data-tier={
+                      entry.collected && entry.tier ? entry.tier : undefined
+                    }
                     onClick={() => setSelectedDishId(entry.id)}
                     aria-label={stampBookCardLabel({
                       name: entry.name,
                       collected: entry.collected,
                       tierLabel: entry.tierLabel,
                       count: entry.count,
+                      masked: entry.masked,
                     })}
                     aria-haspopup="dialog"
                   >
@@ -254,8 +265,23 @@ export function StampBookPage() {
                         entry.collected ? entry.dateLabel : undefined
                       }
                       size="md"
+                      locked={
+                        entry.masked
+                          ? true
+                          : entry.isCustom
+                            ? false
+                            : undefined
+                      }
                       ariaHidden
                     />
+                    {entry.masked && (
+                      <span
+                        className="stamp-book-card__category"
+                        aria-hidden="true"
+                      >
+                        {DISH_CATEGORY_EMOJI[entry.category]}
+                      </span>
+                    )}
                     {entry.isCustom && (
                       <span className="stamp-book-card__badge">
                         {entry.archived ? '已归档' : '自制'}
@@ -264,13 +290,15 @@ export function StampBookPage() {
                     <span className="stamp-book-card__name">
                       {entry.name}
                     </span>
-                    <span className="stamp-book-card__meta">
-                      {entry.archived
-                        ? '已归档 · 历史仍可查看'
-                        : entry.collected
-                          ? `${entry.tierLabel}章 · ×${entry.count}`
-                          : '未收集'}
-                    </span>
+                    {!entry.masked && (
+                      <span className="stamp-book-card__meta">
+                        {entry.archived
+                          ? '已归档 · 历史仍可查看'
+                          : entry.collected
+                            ? `${entry.tierLabel}章 · ×${entry.count}`
+                            : '未收集'}
+                      </span>
+                    )}
                   </button>
                 </li>
               )
@@ -287,17 +315,11 @@ export function StampBookPage() {
         <p>同一道菜累计打卡次数越多，边框就会升一级。</p>
         <ul className="stamp-legend">
           {STAMP_TIERS.map((tier) => {
-            const meta = STAMP_TIER_META[tier.tier]
-            const style = {
-              '--stamp-color': meta.color,
-              '--stamp-soft': meta.soft,
-            } as CSSProperties
-
             return (
               <li
                 key={tier.tier}
                 className="stamp-legend__item"
-                style={style}
+                data-tier={tier.tier}
               >
                 <span
                   className="stamp-legend__ring"
@@ -362,10 +384,7 @@ export function StampBookPage() {
       {selectedEntry && (
         <StampDetailModal
           entry={selectedEntry}
-          showCalories={isCaloriesVisible(
-            data.profile,
-            data.settings.showCalories,
-          )}
+          showCalories={data.settings.showCalories}
           onClose={() => setSelectedDishId(null)}
           {...(selectedCustom && !selectedCustom.archived
             ? {

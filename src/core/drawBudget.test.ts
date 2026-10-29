@@ -28,23 +28,22 @@ describe('drawBudget', () => {
     expect(tokenCount).toBe(0)
   })
 
-  it('allows at most three ad draws per meal', () => {
-    let budget: MealDrawBudget = {
+  it('never caps ad draws per meal', () => {
+    const budget: MealDrawBudget = {
       ...createMealDrawBudget(),
       baseUsed: DRAW_LIMITS.basePerMeal,
+      adUsed: 10,
     }
 
-    for (let i = 0; i < DRAW_LIMITS.adBonusPerMeal; i += 1) {
-      const result = consumeDraw(budget, 0)
-      expect(result.source).toBe('ad')
-      budget = result.budget
-    }
+    expect(getDrawAllowance(budget, 0)).toMatchObject({
+      canDraw: true,
+      nextSource: 'ad',
+      remainingAds: null,
+    })
 
-    const allowance = getDrawAllowance(budget, 0)
-    expect(allowance.canDraw).toBe(false)
-    expect(allowance.nextSource).toBeNull()
-    expect(allowance.remainingAds).toBe(0)
-    expect(() => consumeDraw(budget, 0)).toThrow('没有可用的抽卡次数')
+    const result = consumeDraw(budget, 0)
+    expect(result.source).toBe('ad')
+    expect(result.budget.adUsed).toBe(11)
   })
 
   it('reports remaining counts from the current budget', () => {
@@ -59,8 +58,8 @@ describe('drawBudget', () => {
       nextSource: 'base',
       remainingBase: 1,
       remainingTokens: 2,
-      remainingAds: 1,
-      totalRemaining: 4,
+      remainingAds: null,
+      totalRemaining: null,
     })
   })
 
@@ -100,7 +99,9 @@ describe('drawBudget', () => {
 
     const allowance = getDrawAllowance(budget, 0)
     expect(allowance.remainingBase).toBe(0)
-    expect(allowance.remainingAds).toBe(0)
-    expect(allowance.canDraw).toBe(false)
+    expect(allowance.remainingTokens).toBe(0)
+    expect(allowance.remainingAds).toBeNull()
+    expect(allowance.canDraw).toBe(true)
+    expect(allowance.nextSource).toBe('ad')
   })
 })

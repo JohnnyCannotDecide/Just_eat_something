@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import type { CSSProperties } from 'react'
 
 import { RARITY_META } from '@/config/gameConfig'
 import { calcMealCalories } from '@/core/components'
 import type { DrawReceipt } from '@/store/useAppStore'
 
-import { DRAW_SOURCE_LABELS } from '../../copy'
+import { DRAW_SOURCE_LABELS, SHUFFLE_MESSAGE } from '../../copy'
 import { getDishEmoji } from '../../dishEmoji'
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
+import { useReducedMotion } from '../../useReducedMotion'
 import { DishThumb } from '../today/DishThumb'
 import { ModalShell } from './ModalShell'
 
@@ -25,28 +25,22 @@ export function DrawOverlay({
   onClose,
 }: DrawOverlayProps) {
   const [revealed, setRevealed] = useState(false)
+  const reduceMotion = useReducedMotion()
   const rarity = RARITY_META[receipt.candidate.rarity]
   const kcal = calcMealCalories(receipt.candidate.components)
   const components = receipt.candidate.components.filter(
     (component) => !component.discarded,
   )
-  const style = {
-    '--rarity-color': rarity.color,
-    '--rarity-glow': rarity.glow,
-  } as CSSProperties
 
   useEffect(() => {
-    if (
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
+    if (reduceMotion) {
       setRevealed(true)
       return
     }
 
     const timer = window.setTimeout(() => setRevealed(true), FLIP_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [])
+  }, [reduceMotion])
 
   return (
     <ModalShell
@@ -62,10 +56,10 @@ export function DrawOverlay({
     >
       <p className="sr-only" role="status">
         {revealed
-          ? `抽到 ${receipt.candidate.name}，${rarity.label} 稀有度，约 ${formatKcal(
+          ? `抽到 ${receipt.candidate.name}，${rarity.label} 稀有度，约 ${formatKcalWithUnit(
               kcal,
               showCalories,
-            )} 千卡`
+            )}`
           : '正在翻卡'}
       </p>
 
@@ -75,7 +69,7 @@ export function DrawOverlay({
           className={`draw-card draw-card--${receipt.candidate.rarity.toLowerCase()}${
             revealed ? ' is-flipped' : ''
           }`}
-          style={style}
+          data-rarity={receipt.candidate.rarity}
           onClick={() => setRevealed(true)}
           aria-label={
             revealed
@@ -114,8 +108,8 @@ export function DrawOverlay({
                 ))}
               </span>
               <span className="draw-card__meta">
-                {formatKcal(kcal, showCalories)} kcal · {components.length}{' '}
-                个部件
+                {formatKcalWithUnit(kcal, showCalories)} ·{' '}
+                {components.length} 个部件
               </span>
               {receipt.candidate.tip && (
                 <span className="draw-card__tip">
@@ -136,6 +130,9 @@ export function DrawOverlay({
           <span className="draw-result__chip draw-result__chip--pity">
             ✨ 保底出现啦
           </span>
+        )}
+        {receipt.shuffled && (
+          <span className="draw-result__chip">{SHUFFLE_MESSAGE}</span>
         )}
       </div>
 

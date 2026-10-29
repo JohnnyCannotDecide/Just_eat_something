@@ -25,6 +25,8 @@ export interface DishComponentOptions extends SnapshotCatalogOptions {
   discarded?: boolean
   /** ingredientId → 实际克数；不存在的 key 会被忽略。 */
   ingredientGrams?: Readonly<Record<string, number>>
+  /** 该槽位本轮出现过的菜；缺省为 [dish.id]。 */
+  seenDishIds?: readonly string[]
 }
 
 export interface CustomComponentInput {
@@ -118,6 +120,20 @@ export function createComponentId(
   while (usedIds.has(id)) {
     index += 1
     id = `comp:${origin}:${slug}:${index}`
+  }
+  return id
+}
+
+/** 洗牌后可能再次抽到同一套餐；给它一个唯一实例 id，避免覆盖旧候选。 */
+export function createCandidateInstanceId(
+  comboId: string,
+  usedIds: ReadonlySet<string>,
+): string {
+  let id = comboId
+  let index = 2
+  while (usedIds.has(id)) {
+    id = `${comboId}#${index}`
+    index += 1
   }
   return id
 }
@@ -218,6 +234,7 @@ export function createDishComponent(
     calories,
     eaten: options.eaten ?? true,
     discarded: options.discarded ?? false,
+    seenDishIds: [...new Set([...(options.seenDishIds ?? []), dish.id])],
   }
 }
 
@@ -245,6 +262,7 @@ export function createCustomComponent(
     calories: normalizeCalories(input.calories),
     eaten: true,
     discarded: false,
+    seenDishIds: [],
   }
 }
 
@@ -268,6 +286,7 @@ function createMissingDishComponent(
     calories: null,
     eaten,
     discarded: false,
+    seenDishIds: [dishId],
   }
 }
 
@@ -300,6 +319,9 @@ export function createComboCandidate(
     comboId: combo.id,
     source,
     name: combo.name,
+    nameSource: 'auto',
+    baseName: combo.name,
+    baseDishIds: [...combo.components],
     rarity: combo.rarity,
     ...(combo.tip !== undefined ? { tip: combo.tip } : {}),
     components,
@@ -321,6 +343,9 @@ export function createLegacyCandidate(
       comboId: null,
       source: 'legacy',
       name: input.dishId,
+      nameSource: 'legacy',
+      baseName: input.dishId,
+      baseDishIds: [input.dishId],
       rarity: 'R',
       components: [createMissingDishComponent(input.dishId, componentId, eaten)],
     }
@@ -338,6 +363,9 @@ export function createLegacyCandidate(
     comboId: null,
     source: 'legacy',
     name: dish.name,
+    nameSource: 'legacy',
+    baseName: dish.name,
+    baseDishIds: [dish.id],
     rarity: dish.rarity,
     ...(dish.tip !== undefined ? { tip: dish.tip } : {}),
     components: [
@@ -364,6 +392,10 @@ export function createLegacyCustomCandidate(
     comboId: null,
     source: 'legacy',
     name: component.name,
+    nameSource: 'manual',
+    manualName: component.name,
+    baseName: component.name,
+    baseDishIds: [],
     rarity: 'R',
     components: [component],
   }
@@ -382,6 +414,10 @@ export function createCustomOnlyCandidate(
     comboId: null,
     source: 'customRecord',
     name: component.name,
+    nameSource: 'manual',
+    manualName: component.name,
+    baseName: component.name,
+    baseDishIds: [],
     rarity: 'R',
     components: [component],
   }

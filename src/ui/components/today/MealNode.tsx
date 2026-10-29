@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { CSSProperties } from 'react'
 
 import type { MealType } from '@/core/types'
@@ -6,7 +7,7 @@ import {
   drawActionLabel,
   STATUS_LABELS,
 } from '../../copy'
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import type {
   TodayComponent,
   TodayMealView,
@@ -22,6 +23,7 @@ interface MealNodeProps {
   showCalories: boolean
   onDraw: (meal: MealType) => void
   onSelectCombo: (meal: MealType, candidateId: string) => void
+  onRenameCombo: (meal: MealType, candidateId: string) => void
   onCheckIn: (meal: MealType) => void
   onCustom: (meal: MealType) => void
   onRedraw: (meal: MealType, candidateId: string, componentId: string) => void
@@ -43,6 +45,7 @@ export function MealNode({
   showCalories,
   onDraw,
   onSelectCombo,
+  onRenameCombo,
   onCheckIn,
   onCustom,
   onRedraw,
@@ -64,6 +67,34 @@ export function MealNode({
       ? meal.candidates.filter((candidate) => candidate.id !== selected.id)
       : []
   const selectedCalories = selected?.kcal ?? null
+  // 展开状态只属于当前页面，不写入存档；每张卡独立切换。
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(
+    () => new Set(selected ? [selected.id] : []),
+  )
+
+  function toggleExpanded(candidateId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current)
+      if (next.has(candidateId)) {
+        next.delete(candidateId)
+      } else {
+        next.add(candidateId)
+      }
+      return next
+    })
+  }
+
+  function selectCombo(candidateId: string) {
+    setExpandedIds((current) => {
+      if (current.has(candidateId)) {
+        return current
+      }
+      const next = new Set(current)
+      next.add(candidateId)
+      return next
+    })
+    onSelectCombo(meal.type, candidateId)
+  }
 
   return (
     <li className={`meal-node meal-node--${meal.status}`} style={style}>
@@ -80,10 +111,10 @@ export function MealNode({
         </div>
         <span className="meal-node__kcal">
           {isCheckedIn
-            ? `${formatKcal(meal.calories, showCalories)} kcal`
+            ? formatKcalWithUnit(meal.calories, showCalories)
             : isDrawn
               ? selected
-                ? `${formatKcal(selectedCalories, showCalories)} kcal`
+                ? formatKcalWithUnit(selectedCalories, showCalories)
                 : '待选'
               : '—'}
         </span>
@@ -111,46 +142,62 @@ export function MealNode({
                 <ComboTile
                   key={candidate.id}
                   combo={candidate}
+                  expanded={expandedIds.has(candidate.id)}
                   disabled={pending}
                   showCalories={showCalories}
-                  onSelect={(candidateId) =>
-                    onSelectCombo(meal.type, candidateId)
-                  }
-                />
+                  onToggle={() => toggleExpanded(candidate.id)}
+                  onSelect={selectCombo}
+                  {...(candidate.selected && !isCheckedIn
+                    ? {
+                        onRename: () =>
+                          onRenameCombo(meal.type, candidate.id),
+                      }
+                    : {})}
+                >
+                  <ComponentList
+                    components={candidate.components}
+                    pending={pending}
+                    checkedIn={false}
+                    readOnly={!candidate.selected}
+                    showCalories={showCalories}
+                    undoableComponentId={
+                      candidate.selected ? meal.undoableComponentId : null
+                    }
+                    onToggleEaten={(component, eaten) =>
+                      onToggleEaten(
+                        meal.type,
+                        candidate.id,
+                        component,
+                        eaten,
+                      )
+                    }
+                    onRedraw={(component) =>
+                      onRedraw(meal.type, candidate.id, component.id)
+                    }
+                    onDiscard={(component) =>
+                      onDiscard(meal.type, candidate.id, component.id)
+                    }
+                    onUndo={() => onUndo(meal.type)}
+                    onAddComponent={() =>
+                      onAddComponent(meal.type, candidate.id)
+                    }
+                  />
+                </ComboTile>
               ))}
             </div>
 
             {selected ? (
-              <>
-                <p className="meal-selection" aria-live="polite">
-                  已选：{selected.name}，确认部件后再打卡
-                </p>
-                <ComponentList
-                  components={selected.components}
-                  pending={pending}
-                  checkedIn={false}
-                  showCalories={showCalories}
-                  undoableComponentId={meal.undoableComponentId}
-                  onToggleEaten={(component, eaten) => {
-                    if (selected) {
-                      onToggleEaten(meal.type, selected.id, component, eaten)
-                    }
-                  }}
-                  onRedraw={(component) =>
-                    onRedraw(meal.type, selected.id, component.id)
-                  }
-                  onDiscard={(component) =>
-                    onDiscard(meal.type, selected.id, component.id)
-                  }
-                  onUndo={() => onUndo(meal.type)}
-                  onAddComponent={() =>
-                    onAddComponent(meal.type, selected.id)
-                  }
-                />
-              </>
+              <p className="meal-selection" aria-live="polite">
+                已选：{selected.name}，确认部件后再打卡
+              </p>
             ) : (
               <p className="meal-selection" aria-live="polite">
-                点一张套餐卡，展开它包含的部件。
+                点开套餐卡看看里面，选好后点「选这套」。
+              </p>
+            )}
+            {meal.stapleHint && (
+              <p className="meal-note" role="status">
+                这一餐主食不够哦
               </p>
             )}
           </>
@@ -175,8 +222,7 @@ export function MealNode({
                 <strong>{selected?.name ?? '这一餐'}</strong>
               </div>
               <span className="meal-result__kcal">
-                {formatKcal(meal.calories, showCalories)}
-                <small> kcal</small>
+                {formatKcalWithUnit(meal.calories, showCalories)}
               </span>
             </div>
 
@@ -261,14 +307,21 @@ export function MealNode({
             ) : (
               <>
                 <span className="meal-draw__total">
-                  {canDraw
-                    ? `还能抽 ${meal.allowance.totalRemaining} 次`
-                    : '今天的次数用完啦'}
+                  {meal.allowance.remainingBase +
+                    meal.allowance.remainingTokens >
+                  0
+                    ? `还能抽 ${
+                        meal.allowance.remainingBase +
+                        meal.allowance.remainingTokens
+                      } 次`
+                    : '还可以看广告继续抽'}
                 </span>
                 <span className="meal-draw__breakdown">
                   基础 {meal.allowance.remainingBase} · 券{' '}
                   {meal.allowance.remainingTokens} · 广告{' '}
-                  {meal.allowance.remainingAds}
+                  {meal.allowance.remainingAds === null
+                    ? '不限'
+                    : meal.allowance.remainingAds}
                 </span>
               </>
             )}

@@ -45,6 +45,8 @@ export interface StampBookEntry {
   cooking: CookingInfo | null
   isCustom: boolean
   archived: boolean
+  /** 未收集的官方菜：名称与全部内容已在 selector 层抹除。 */
+  masked: boolean
 
   collected: boolean
   count: number
@@ -130,6 +132,26 @@ function buildOfficialEntry(
   dish: Dish,
   record: StampRecord | undefined,
 ): StampBookEntry {
+  const progress = buildProgress(record)
+  if (!progress.collected) {
+    // 未收集：不把名称、图片、食材、做法、热量带进视图，UI 无从泄露。
+    return {
+      id: dish.id,
+      name: '???',
+      rarity: dish.rarity,
+      category: dish.category,
+      emoji: '',
+      image: '',
+      kcal: null,
+      ingredients: [],
+      cooking: null,
+      isCustom: false,
+      archived: false,
+      masked: true,
+      ...progress,
+    }
+  }
+
   return {
     id: dish.id,
     name: dish.name,
@@ -145,7 +167,8 @@ function buildOfficialEntry(
     cooking: dish.cooking,
     isCustom: false,
     archived: false,
-    ...buildProgress(record),
+    masked: false,
+    ...progress,
   }
 }
 
@@ -171,6 +194,7 @@ function buildCustomEntry(
     cooking: dish.cooking,
     isCustom: true,
     archived: dish.archived,
+    masked: false,
     ...buildProgress(record),
   }
 }
@@ -184,6 +208,7 @@ export function buildStampBookView(
   input: StampBookInput,
   filter: StampBookFilter = 'all',
   dishSource: readonly Dish[] = dishes,
+  query = '',
 ): StampBookView {
   const stamps = input.stamps ?? {}
   const officialEntries = dishSource.map((dish) =>
@@ -210,6 +235,16 @@ export function buildStampBookView(
     default:
       entries = [...officialEntries, ...customEntries]
       break
+  }
+
+  const keyword = query.trim().toLowerCase()
+  if (keyword.length > 0) {
+    // 未收集官方菜不参与搜索；masked 名称已是 ???，双重兜底。
+    entries = entries.filter(
+      (entry) =>
+        (entry.isCustom || entry.collected) &&
+        entry.name.toLowerCase().includes(keyword),
+    )
   }
 
   return {

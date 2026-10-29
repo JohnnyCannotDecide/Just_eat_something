@@ -9,6 +9,9 @@ import {
   MAX_UR_COMBOS,
   MEAL_TYPES,
   MIN_COMBOS_PER_MEAL,
+  comboProvides,
+  isBreakfastOnly,
+  isSideOnlyCategory,
 } from './dataRules'
 import { comboById, combos, dishById, dishes } from './index'
 
@@ -24,15 +27,16 @@ const COMBO_KEYS = new Set([
 const REQUIRED_COMBO_KEYS = ['id', 'name', 'meals', 'components']
 
 const RARITY_COUNTS: Record<Rarity, number> = {
-  R: 11,
-  SR: 17,
-  SSR: 9,
+  R: 18,
+  SR: 35,
+  SSR: 12,
   UR: 3,
 }
 
 describe('combo data', () => {
   it('has the expected top-level shape and fields', () => {
     expect(Object.keys(combosJson).sort()).toEqual(TOP_LEVEL_COMBO_KEYS)
+    expect(combos).toHaveLength(68)
 
     for (const combo of combosJson.combos) {
       const keys = Object.keys(combo)
@@ -71,10 +75,72 @@ describe('combo data', () => {
     }
   })
 
-  it('offers at least eight combos per meal', () => {
+  it('keeps breakfast-only dishes out of lunch and dinner combos', () => {
+    for (const combo of combos) {
+      for (const dishId of combo.components) {
+        const dish = dishById.get(dishId)!
+        if (isBreakfastOnly(dish)) {
+          expect(combo.meals, `${combo.id} 使用了早餐专属菜 ${dish.id}`).toEqual([
+            'breakfast',
+          ])
+        }
+      }
+    }
+  })
+
+  it('gives every lunch combo both a staple and a protein', () => {
+    for (const combo of combos.filter((item) =>
+      item.meals.includes('lunch'),
+    )) {
+      expect(
+        comboProvides(combo, dishById, 'providesStaple'),
+        `${combo.id} 午餐缺少主食`,
+      ).toBe(true)
+      expect(
+        comboProvides(combo, dishById, 'providesProtein'),
+        `${combo.id} 午餐缺少蛋白质`,
+      ).toBe(true)
+    }
+  })
+
+  it('never lets a side-only dish form a single-component combo', () => {
+    for (const combo of combos) {
+      if (combo.components.length !== 1) continue
+      const dish = dishById.get(combo.components[0])!
+      expect(
+        isSideOnlyCategory(dish.category),
+        `${combo.id} 只有一份${dish.category}，不能单独成餐`,
+      ).toBe(false)
+    }
+  })
+
+  it('offers at least twelve combos per meal', () => {
     for (const meal of MEAL_TYPES) {
       const count = combos.filter((combo) => combo.meals.includes(meal)).length
       expect(count).toBeGreaterThanOrEqual(MIN_COMBOS_PER_MEAL)
+    }
+  })
+
+  it('matches the planned combo counts per meal', () => {
+    expect(combos.filter((combo) => combo.meals.includes('breakfast'))).toHaveLength(17)
+    expect(combos.filter((combo) => combo.meals.includes('lunch'))).toHaveLength(32)
+    expect(combos.filter((combo) => combo.meals.includes('dinner'))).toHaveLength(19)
+  })
+
+  it('keeps the rebuilt anchor combos intact', () => {
+    expect(combos[0]?.id).toBe('b_soy_youtiao')
+    expect(combos[0]?.components).not.toContain('boiled_egg')
+    expect(combos[0]?.components).toEqual(['soy_milk', 'youtiao', 'tea_egg'])
+    expect(comboById.has('b_porridge_egg')).toBe(true)
+  })
+
+  it('adds two dinner-only light combos without staples', () => {
+    for (const id of ['d_light_salad', 'd_light_soup']) {
+      const combo = comboById.get(id)
+      expect(combo, `${id} 缺失`).toBeDefined()
+      expect(combo!.meals).toEqual(['dinner'])
+      expect(combo!.rarity).toBe('SR')
+      expect(comboProvides(combo!, dishById, 'providesStaple')).toBe(false)
     }
   })
 

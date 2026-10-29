@@ -1,6 +1,7 @@
 import type {
   BinaryStorageAdapter,
   StoredImage,
+  StoredImageEntry,
 } from './BinaryStorageAdapter'
 import type { StorageAdapter } from './StorageAdapter'
 import { IndexedDbImageStore } from './IndexedDbImageStore'
@@ -30,6 +31,14 @@ export class AppStorage implements StorageAdapter, BinaryStorageAdapter {
     return this.json.set(key, value)
   }
 
+  getRaw(key: string): Promise<string | null> {
+    return this.json.getRaw(key)
+  }
+
+  setRaw(key: string, raw: string): Promise<void> {
+    return this.json.setRaw(key, raw)
+  }
+
   remove(key: string): Promise<void> {
     return this.json.remove(key)
   }
@@ -44,6 +53,14 @@ export class AppStorage implements StorageAdapter, BinaryStorageAdapter {
 
   putImage(key: string, image: StoredImage): Promise<void> {
     return this.images.putImage(key, image)
+  }
+
+  listImages(): Promise<StoredImageEntry[]> {
+    return this.images.listImages()
+  }
+
+  putImages(entries: readonly StoredImageEntry[]): Promise<void> {
+    return this.images.putImages(entries)
   }
 
   deleteImage(key: string): Promise<void> {

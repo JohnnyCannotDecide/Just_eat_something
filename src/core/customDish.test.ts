@@ -365,7 +365,7 @@ describe('custom dishes in gameplay', () => {
         budget: createMealDrawBudget(),
         tokenCount: 0,
         pityCount: 0,
-        candidateComboIds: [],
+        drawnComboIds: [],
       },
       { catalog: library.combos, rng: () => 0 },
     )

@@ -8,20 +8,22 @@ import {
 import { isTokenValid } from '@/core/tokens'
 import type {
   BodyProfile,
+  Combo,
   CustomDish,
   MealType,
 } from '@/core/types'
 import {
   APP_DATA_SCHEMA_VERSION,
   APP_DATA_STORAGE_KEY,
+  createEmptyAppData,
   loadAppData,
 } from '@/storage/appData'
-import { dishById } from '@/data'
-import type {
-  BinaryStorageAdapter,
-  StoredImage,
-} from '@/storage/BinaryStorageAdapter'
+import { combos, dishById, dishes } from '@/data'
+import { PENDING_IMPORT_KEY } from '@/storage/backup'
 import { LocalStorageAdapter } from '@/storage/LocalStorageAdapter'
+import { TEST_STORAGE_PREFIX } from '@/storage/namespaces'
+import { clearTestStorage } from '@/test/storage'
+import { createMemoryImages, createMemorySnapshots } from '@/test/fakes'
 
 import { createAppStore } from './useAppStore'
 import type { CustomDishInput } from './useAppStore'
@@ -39,7 +41,7 @@ const profile: BodyProfile = {
 }
 
 beforeEach(() => {
-  localStorage.clear()
+  clearTestStorage()
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 9, 27, 12, 0, 0))
 })
@@ -48,30 +50,23 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function createMemoryImages(): BinaryStorageAdapter & {
-  images: Map<string, StoredImage>
-} {
-  const images = new Map<string, StoredImage>()
-  return {
-    images,
-    getImage: async (key) => images.get(key) ?? null,
-    putImage: async (key, image) => {
-      images.set(key, image)
-    },
-    deleteImage: async (key) => {
-      images.delete(key)
-    },
-    clearImages: async () => {
-      images.clear()
-    },
-  }
+function setup(rng: () => number = () => 0) {
+  const adapter = new LocalStorageAdapter(TEST_STORAGE_PREFIX)
+  const images = createMemoryImages()
+  const snapshots = createMemorySnapshots({ adapter, images })
+  const store = createAppStore(adapter, undefined, rng, images, {
+    snapshots,
+    namespace: 'test',
+  })
+  return { adapter, images, snapshots, store }
 }
 
-function setup(rng: () => number = () => 0) {
-  const adapter = new LocalStorageAdapter('test:')
-  const images = createMemoryImages()
-  const store = createAppStore(adapter, undefined, rng, images)
-  return { adapter, images, store }
+/** 模拟刷新页面：同一个存储端口上新建一个 store。 */
+function reopen(ctx: ReturnType<typeof setup>) {
+  return createAppStore(ctx.adapter, undefined, () => 0, ctx.images, {
+    snapshots: ctx.snapshots,
+    namespace: 'test',
+  })
 }
 
 function customDish(overrides: Partial<CustomDish> = {}): CustomDish {
@@ -133,7 +128,7 @@ describe('useAppStore', () => {
 
   it('hydrates only once when called concurrently', async () => {
     const { adapter, store } = setup()
-    const getSpy = vi.spyOn(adapter, 'get')
+    const getSpy = vi.spyOn(adapter, 'getRaw')
 
     await Promise.all([
       store.getState().hydrate(),
@@ -157,21 +152,21 @@ describe('useAppStore', () => {
     expect(store.getState().data.profile).toEqual(profile)
     expect(store.getState().data.targetCalories).toBe(1584)
     await expect(loadAppData(adapter, DAY_1)).resolves.toMatchObject({
-      profile,
-      targetCalories: 1584,
+      status: 'ok',
+      data: { profile, targetCalories: 1584 },
     })
   })
 
-  it('enables calorie display on the first profile save', async () => {
+  it('keeps calorie display on through the first profile save', async () => {
     const { adapter, store } = setup()
     await store.getState().hydrate()
-    expect(store.getState().data.settings.showCalories).toBe(false)
+    expect(store.getState().data.settings.showCalories).toBe(true)
 
     await store.getState().updateProfile(profile)
 
     expect(store.getState().data.settings.showCalories).toBe(true)
     await expect(loadAppData(adapter, DAY_1)).resolves.toMatchObject({
-      settings: { showCalories: true },
+      data: { settings: { showCalories: true } },
     })
   })
 
@@ -187,13 +182,47 @@ describe('useAppStore', () => {
     expect(store.getState().data.settings.showCalories).toBe(false)
   })
 
-  it('ignores a request to show calories without a profile', async () => {
+  it('lets a guest toggle the calorie switch', async () => {
     const { store } = setup()
     await store.getState().hydrate()
 
-    await store.getState().setShowCalories(true)
-
+    await store.getState().setShowCalories(false)
     expect(store.getState().data.settings.showCalories).toBe(false)
+
+    await store.getState().setShowCalories(true)
+    expect(store.getState().data.settings.showCalories).toBe(true)
+  })
+
+  it('persists the chosen theme across hydration', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    expect(ctx.store.getState().data.settings.theme).toBe('cute')
+
+    await ctx.store.getState().setTheme('vivid')
+
+    expect(ctx.store.getState().data.settings.theme).toBe('vivid')
+    await expect(loadAppData(ctx.adapter, DAY_1)).resolves.toMatchObject({
+      data: { settings: { theme: 'vivid' } },
+    })
+
+    const second = reopen(ctx)
+    await second.getState().hydrate()
+    expect(second.getState().data.settings.theme).toBe('vivid')
+  })
+
+  it('returns to the default theme after clearing data', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().setTheme('simple')
+
+    await expect(ctx.store.getState().clearData()).resolves.toMatchObject({
+      status: 'cleared',
+    })
+
+    expect(ctx.store.getState().data.settings.theme).toBe('cute')
+    await expect(ctx.adapter.get(APP_DATA_STORAGE_KEY)).resolves.toMatchObject({
+      settings: { theme: 'cute' },
+    })
   })
 
   it('dismisses the guest hint persistently', async () => {
@@ -204,7 +233,7 @@ describe('useAppStore', () => {
 
     expect(store.getState().data.settings.profileHintDismissed).toBe(true)
     await expect(loadAppData(adapter, DAY_1)).resolves.toMatchObject({
-      settings: { profileHintDismissed: true },
+      data: { settings: { profileHintDismissed: true } },
     })
   })
 
@@ -212,6 +241,7 @@ describe('useAppStore', () => {
     const { store } = setup()
     await store.getState().hydrate()
     await store.getState().updateProfile(profile)
+    await store.getState().setShowCalories(false)
     await store.getState().recordStamp('dish_a', DAY_1)
     await store.getState().dismissProfileHint()
 
@@ -242,10 +272,15 @@ describe('useAppStore', () => {
     expect(store.getState().data.settings).toEqual({
       showCalories: true,
       profileHintDismissed: true,
+      theme: 'cute',
     })
     await expect(adapter.get(APP_DATA_STORAGE_KEY)).resolves.toMatchObject({
-      schemaVersion: 2,
-      settings: { showCalories: true, profileHintDismissed: true },
+      schemaVersion: 5,
+      settings: {
+        showCalories: true,
+        profileHintDismissed: true,
+        theme: 'cute',
+      },
     })
   })
 
@@ -262,7 +297,7 @@ describe('useAppStore', () => {
 
     await store.getState().hydrate()
 
-    expect(store.getState().data.settings.showCalories).toBe(false)
+    expect(store.getState().data.settings.showCalories).toBe(true)
     expect(store.getState().data.settings.profileHintDismissed).toBe(false)
   })
 
@@ -298,7 +333,7 @@ describe('useAppStore', () => {
     expect(isTokenValid(state.data.days[DAY_1]!.tokens, DAY_2)).toBe(false)
 
     const persisted = await loadAppData(adapter, DAY_2)
-    expect(persisted.days[DAY_2]).toBeDefined()
+    expect(persisted.data.days[DAY_2]).toBeDefined()
   })
 
   it('ensures today before any write', async () => {
@@ -448,7 +483,7 @@ describe('useAppStore', () => {
     const lunch = state.data.days[DAY_1]!.meals.lunch
     const candidate = lunch.candidateCombos[0]!
 
-    expect(state.data.schemaVersion).toBe(2)
+    expect(state.data.schemaVersion).toBe(5)
     expect(state.data.pityCount).toBe(2)
     expect(candidate.id).toBe(`legacy:${DAY_1}:lunch:white_rice`)
     expect(lunch.selectedCandidateId).toBe(candidate.id)
@@ -540,6 +575,198 @@ describe('useAppStore', () => {
   })
 })
 
+describe('data safety', () => {
+  it('does not rewrite existing v2 data when the app starts', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().updateProfile(profile)
+    const raw = await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)
+
+    const setSpy = vi.spyOn(ctx.adapter, 'set')
+    const setRawSpy = vi.spyOn(ctx.adapter, 'setRaw')
+
+    const reopened = reopen(ctx)
+    await reopened.getState().hydrate()
+
+    expect(reopened.getState().status).toBe('ready')
+    expect(reopened.getState().data.profile).toEqual(profile)
+    expect(await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)).toBe(raw)
+    expect(setSpy).not.toHaveBeenCalled()
+    expect(setRawSpy).not.toHaveBeenCalled()
+  })
+
+  it('enters recovery mode without touching corrupt raw data', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.adapter.setRaw(APP_DATA_STORAGE_KEY, '{bad')
+
+    const reopened = reopen(ctx)
+    await reopened.getState().hydrate()
+
+    const state = reopened.getState()
+    expect(state.status).toBe('recovery')
+    expect(state.recovery?.reason).toBe('corrupt')
+    expect(state.recovery?.raw).toBe('{bad')
+    expect(await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)).toBe('{bad')
+  })
+
+  it('snapshots before clearing and can restore records and images', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().updateProfile(profile)
+    await ctx.store.getState().recordStamp('dish_a', DAY_1)
+    await ctx.images.putImage('img:a', {
+      mime: 'image/png',
+      bytes: new Uint8Array([1, 2]),
+    })
+    await ctx.store
+      .getState()
+      .updateData((data) => ({ ...data, customDishes: [customDish()] }))
+    const rawBefore = await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)
+
+    await expect(ctx.store.getState().clearData()).resolves.toEqual({
+      status: 'cleared',
+    })
+    expect(ctx.images.images.size).toBe(0)
+
+    const listed = await ctx.store.getState().listSnapshots()
+    expect(listed.status).toBe('ok')
+    if (listed.status !== 'ok') return
+    expect(listed.snapshots[0]?.reason).toBe('before-clear')
+
+    await expect(
+      ctx.store.getState().restoreSnapshot(listed.snapshots[0]!.id),
+    ).resolves.toEqual({ status: 'restored' })
+
+    const restored = ctx.store.getState()
+    expect(restored.status).toBe('ready')
+    expect(restored.data.profile).toEqual(profile)
+    expect(restored.data.stamps.dish_a?.checkInCount).toBe(1)
+    expect(restored.data.customDishes).toHaveLength(1)
+    expect(await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)).toBe(rawBefore)
+    expect(ctx.images.images.has('img:a')).toBe(true)
+    // 恢复前又生成了一份当前（空）状态的快照。
+    const afterRestore = await ctx.snapshots.list()
+    expect(
+      afterRestore.some((snapshot) => snapshot.reason === 'before-restore'),
+    ).toBe(true)
+  })
+
+  it('snapshots before clearing the profile', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().updateProfile(profile)
+
+    await expect(ctx.store.getState().clearProfile()).resolves.toEqual({
+      status: 'cleared',
+    })
+
+    const list = await ctx.snapshots.list()
+    expect(list[0]?.reason).toBe('before-clear-profile')
+    const payload = await ctx.snapshots.read(list[0]!.id)
+    expect(payload?.raw).not.toBeNull()
+    expect(JSON.parse(payload!.raw!).profile).toEqual(profile)
+  })
+
+  it('snapshots before a successful import', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().updateProfile(profile)
+
+    const exported = await ctx.store.getState().exportBackup()
+    if (exported.status !== 'ok') throw new Error(exported.message)
+
+    await expect(
+      ctx.store.getState().importJson(exported.json),
+    ).resolves.toEqual({ status: 'imported' })
+
+    const list = await ctx.snapshots.list()
+    expect(list[0]?.reason).toBe('before-import')
+  })
+
+  it('keeps data and images when the pre-clear snapshot fails', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.store.getState().updateProfile(profile)
+    await ctx.images.putImage('img:a', {
+      mime: 'image/png',
+      bytes: new Uint8Array([1]),
+    })
+    const before = ctx.store.getState().data
+    ctx.snapshots.failCapture = true
+
+    const result = await ctx.store.getState().clearData()
+
+    expect(result.status).toBe('error')
+    expect(ctx.store.getState().data).toEqual(before)
+    expect(ctx.store.getState().data.profile).toEqual(profile)
+    expect(ctx.images.images.has('img:a')).toBe(true)
+    expect(await ctx.adapter.get(APP_DATA_STORAGE_KEY)).toMatchObject({
+      profile,
+    })
+  })
+
+  it('cleans pending import images but keeps referenced ones', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.images.putImage('img:keep', {
+      mime: 'image/png',
+      bytes: new Uint8Array([1]),
+    })
+    await ctx.images.putImage('img:orphan', {
+      mime: 'image/png',
+      bytes: new Uint8Array([2]),
+    })
+    await ctx.store
+      .getState()
+      .updateData((data) => ({
+        ...data,
+        customDishes: [customDish({ imageId: 'img:keep' })],
+      }))
+    await ctx.adapter.set(PENDING_IMPORT_KEY, {
+      imageIds: ['img:keep', 'img:orphan'],
+    })
+
+    const reopened = reopen(ctx)
+    await reopened.getState().hydrate()
+
+    expect(reopened.getState().status).toBe('ready')
+    // 当前数据仍引用的图片必须保留，只清理真正的孤儿。
+    expect(ctx.images.images.has('img:keep')).toBe(true)
+    expect(ctx.images.images.has('img:orphan')).toBe(false)
+    await expect(ctx.adapter.get(PENDING_IMPORT_KEY)).resolves.toBeNull()
+  })
+
+  it('resets after recovery with a snapshot and keeps images', async () => {
+    const ctx = setup()
+    await ctx.store.getState().hydrate()
+    await ctx.images.putImage('img:a', {
+      mime: 'image/png',
+      bytes: new Uint8Array([1]),
+    })
+    await ctx.adapter.setRaw(APP_DATA_STORAGE_KEY, '{bad')
+
+    const reopened = reopen(ctx)
+    await reopened.getState().hydrate()
+    expect(reopened.getState().status).toBe('recovery')
+
+    await expect(reopened.getState().resetAfterRecovery()).resolves.toEqual({
+      status: 'reset',
+    })
+
+    const state = reopened.getState()
+    expect(state.status).toBe('ready')
+    expect(state.recovery).toBeNull()
+    expect(state.data.profile).toBeNull()
+    expect(ctx.images.images.has('img:a')).toBe(true)
+    expect(await ctx.adapter.getRaw(APP_DATA_STORAGE_KEY)).not.toBe('{bad')
+    const list = await ctx.snapshots.list()
+    expect(list.some((snapshot) => snapshot.reason === 'before-recovery')).toBe(
+      true,
+    )
+  })
+})
+
 describe('combo draws', () => {
   it('draws a combo into the meal pool and persists pity/candidates', async () => {
     const { adapter, store } = setup()
@@ -566,7 +793,7 @@ describe('combo draws', () => {
     expect(store.getState().data.pityCount).toBe(1)
 
     await expect(loadAppData(adapter, DAY_1)).resolves.toMatchObject({
-      pityCount: 1,
+      data: { pityCount: 1 },
     })
   })
 
@@ -663,6 +890,84 @@ describe('combo draws', () => {
     expect(meal.budget.baseUsed).toBe(2)
   })
 
+  it('keeps drawing through ads without a per-meal cap', async () => {
+    const { store } = setup()
+    await store.getState().hydrate()
+    await store.getState().drawMeal('breakfast')
+    await store.getState().drawMeal('breakfast')
+
+    for (let index = 0; index < 4; index += 1) {
+      const result = await store.getState().completeAdDraw(
+        'breakfast',
+        true,
+        DAY_1,
+      )
+      expect(result.status).toBe('drawn')
+      if (result.status === 'drawn') {
+        expect(result.receipt.source).toBe('ad')
+      }
+    }
+
+    const meal = currentMeal(store, 'breakfast')
+    expect(meal.budget.adUsed).toBe(4)
+    expect(meal.candidateCombos).toHaveLength(6)
+  })
+
+  it('reshuffles an exhausted round and keeps unique candidate ids', async () => {
+    const { adapter, store } = setup()
+    const pool = combos.filter((combo) => combo.meals.includes('breakfast'))
+    const target = pool.find((combo) => combo.rarity === 'R')!
+    const previous = pool.find((combo) => combo.id !== target.id)!
+    const round = [
+      target.id,
+      ...pool
+        .filter((combo) => combo.id !== target.id && combo.id !== previous.id)
+        .map((combo) => combo.id),
+      previous.id,
+    ]
+    const seedCandidate = createComboCandidate(target, 'draw', target.id, {
+      dishById,
+    })
+    const data = createEmptyAppData(DAY_1)
+    const day = data.days[DAY_1]!
+    await adapter.set(APP_DATA_STORAGE_KEY, {
+      ...data,
+      days: {
+        ...data.days,
+        [DAY_1]: {
+          ...day,
+          meals: {
+            ...day.meals,
+            breakfast: {
+              ...day.meals.breakfast,
+              candidateCombos: [seedCandidate],
+              selectedCandidateId: null,
+              drawnComboIds: round,
+              budget: { baseUsed: 1, adUsed: 0, checkedIn: false },
+            },
+          },
+        },
+      },
+    })
+    await store.getState().hydrate()
+
+    const result = await store.getState().drawMeal('breakfast')
+
+    expect(result.status).toBe('drawn')
+    if (result.status !== 'drawn') return
+    expect(result.receipt.shuffled).toBe(true)
+    expect(result.receipt.singleCandidate).toBe(false)
+    expect(result.receipt.candidate.comboId).toBe(target.id)
+    expect(result.receipt.candidate.id).toBe(`${target.id}#2`)
+
+    const meal = currentMeal(store, 'breakfast')
+    expect(meal.candidateCombos.map((item) => item.id)).toEqual([
+      target.id,
+      `${target.id}#2`,
+    ])
+    expect(meal.drawnComboIds).toEqual([target.id])
+  })
+
   it('reports save failures without leaving the ready state or losing data', async () => {
     const { adapter, store } = setup()
     await store.getState().hydrate()
@@ -754,6 +1059,72 @@ describe('component actions', () => {
     if (completed.status !== 'redrawn') return
     expect(completed.source).toBe('ad')
     expect(currentMeal(store, 'breakfast').budget.adUsed).toBe(1)
+  })
+
+  it('persists seen dishes and reports a reshuffle for a redraw', async () => {
+    const { adapter, store } = setup()
+    const staples = dishes.filter(
+      (dish) =>
+        dish.meals.includes('breakfast') &&
+        dish.category === 'staple' &&
+        dish.rarity !== 'UR',
+    )
+    const target = staples[0]!
+    const combo: Combo = {
+      id: 'test_staple_combo',
+      name: target.name,
+      rarity: 'R',
+      meals: ['breakfast'],
+      components: [target.id],
+    }
+    const candidate = createComboCandidate(combo, 'draw', 'test_candidate', {
+      dishById,
+    })
+    const seeded = {
+      ...candidate,
+      components: candidate.components.map((component) => ({
+        ...component,
+        seenDishIds: staples.map((dish) => dish.id),
+      })),
+    }
+    const data = createEmptyAppData(DAY_1)
+    const day = data.days[DAY_1]!
+    await adapter.set(APP_DATA_STORAGE_KEY, {
+      ...data,
+      days: {
+        ...data.days,
+        [DAY_1]: {
+          ...day,
+          meals: {
+            ...day.meals,
+            breakfast: {
+              ...day.meals.breakfast,
+              candidateCombos: [seeded],
+              selectedCandidateId: 'test_candidate',
+            },
+          },
+        },
+      },
+    })
+    await store.getState().hydrate()
+
+    const result = await store.getState().redrawComponent(
+      'breakfast',
+      'test_candidate',
+      seeded.components[0]!.id,
+    )
+
+    expect(result.status).toBe('redrawn')
+    if (result.status !== 'redrawn') return
+    expect(result.shuffled).toBe(true)
+
+    const next = currentMeal(store, 'breakfast').candidateCombos[0]!
+    const replacement = next.components[0]!
+    expect(replacement.seenDishIds).toEqual([
+      target.id,
+      replacement.dishId,
+    ])
+    expect(replacement.dishId).not.toBe(staples.at(-2)!.id)
   })
 
   it('rejects redraws for a candidate that is not selected', async () => {
@@ -929,6 +1300,136 @@ describe('component actions', () => {
       status: 'error',
       message: '只有自定义记录可以直接修改热量',
     })
+  })
+})
+
+describe('combo renaming', () => {
+  it('renames the selected candidate and persists the manual name', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+
+    await expect(
+      store.getState().renameCombo('breakfast', candidate.id, ' 我的早餐 '),
+    ).resolves.toEqual({ status: 'updated' })
+
+    const saved = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(saved.name).toBe('我的早餐')
+    expect(saved.nameSource).toBe('manual')
+    expect(saved.manualName).toBe('我的早餐')
+  })
+
+  it('restores the original combo name when clearing the manual name', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    const original = candidate.name
+
+    await store.getState().renameCombo('breakfast', candidate.id, '临时名字')
+    await store.getState().renameCombo('breakfast', candidate.id, null)
+
+    const saved = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(saved.name).toBe(original)
+    expect(saved.nameSource).toBe('auto')
+    expect(saved.manualName).toBeUndefined()
+  })
+
+  it('keeps a manual name through a component redraw', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    await store.getState().renameCombo('breakfast', candidate.id, '手动名字')
+
+    await expect(
+      store
+        .getState()
+        .redrawComponent('breakfast', candidate.id, candidate.components[0]!.id),
+    ).resolves.toMatchObject({ status: 'redrawn' })
+
+    const saved = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(saved.name).toBe('手动名字')
+    expect(saved.nameSource).toBe('manual')
+  })
+
+  it('rejects empty and over-long names without touching data', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    const before = store.getState().data
+
+    await expect(
+      store.getState().renameCombo('breakfast', candidate.id, '   '),
+    ).resolves.toEqual({ status: 'error', message: '套餐名不能为空' })
+    await expect(
+      store
+        .getState()
+        .renameCombo('breakfast', candidate.id, '一二三四五六七八九十一'),
+    ).resolves.toEqual({
+      status: 'error',
+      message: '套餐名最多 10 个字',
+    })
+    expect(store.getState().data).toBe(before)
+  })
+
+  it('blocks renaming when nothing is selected or the candidate is unknown', async () => {
+    const { store } = setup()
+    await store.getState().hydrate()
+
+    await expect(
+      store.getState().renameCombo('breakfast', 'missing', '名字'),
+    ).resolves.toEqual({ status: 'blocked', reason: 'no-selection' })
+
+    const candidate = await drawAndSelect(store, 'breakfast')
+    await expect(
+      store.getState().renameCombo('breakfast', 'other-candidate', '名字'),
+    ).resolves.toEqual({ status: 'blocked', reason: 'not-in-pool' })
+    expect(
+      currentMeal(store, 'breakfast').candidateCombos[0]!.id,
+    ).toBe(candidate.id)
+  })
+
+  it('updates the auto name after discarding and restores it on undo', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    const original = candidate.name
+
+    await store
+      .getState()
+      .discardComponent('breakfast', candidate.id, candidate.components[0]!.id)
+    const afterDiscard = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(afterDiscard.name).not.toBe(original)
+    expect(afterDiscard.nameSource).toBe('auto')
+
+    await expect(store.getState().undoDiscard()).resolves.toEqual({
+      status: 'updated',
+    })
+    const restored = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(restored.name).toBe(original)
+  })
+
+  it('blocks renaming after check-in', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    await store.getState().checkInMeal('breakfast')
+
+    await expect(
+      store.getState().renameCombo('breakfast', candidate.id, '事后改名'),
+    ).resolves.toEqual({ status: 'blocked', reason: 'checked-in' })
+  })
+
+  it('writes the final name into the check-in receipt and frozen snapshot', async () => {
+    const { store } = setup()
+    const candidate = await drawAndSelect(store, 'breakfast')
+    await store.getState().renameCombo('breakfast', candidate.id, '番茄早安')
+
+    const result = await store.getState().checkInMeal('breakfast')
+
+    expect(result.status).toBe('checked-in')
+    if (result.status !== 'checked-in') {
+      throw new Error('打卡失败')
+    }
+    expect(result.receipt.name).toBe('番茄早安')
+
+    const saved = currentMeal(store, 'breakfast').candidateCombos[0]!
+    expect(saved.name).toBe('番茄早安')
+    expect(saved.nameSource).toBe('manual')
+    expect(currentMeal(store, 'breakfast').budget.checkedIn).toBe(true)
   })
 })
 
@@ -1281,7 +1782,7 @@ describe('custom dish actions', () => {
     expect(dish.ingredientRows[0]!.ingredientId).toBe(ingredient.id)
 
     const persisted = await loadAppData(adapter)
-    expect(persisted.customDishes[0]!.name).toBe('番茄炒蛋')
+    expect(persisted.data.customDishes[0]!.name).toBe('番茄炒蛋')
   })
 
   it('draws a hidden custom combo into a real custom dish snapshot', async () => {
@@ -1361,7 +1862,7 @@ describe('custom dish actions', () => {
     }
     expect(store.getState().data.customDishes).toEqual([])
     const persisted = await loadAppData(adapter)
-    expect(persisted.customDishes).toEqual([])
+    expect(persisted.data.customDishes).toEqual([])
   })
 
   it('replaces the image and removes the unreferenced old one', async () => {

@@ -1,7 +1,7 @@
 import { useId, useState } from 'react'
 import type { CSSProperties } from 'react'
 
-import { RARITY_META, STAMP_TIER_META } from '@/config/gameConfig'
+import { RARITY_META } from '@/config/gameConfig'
 import { getStampTierLabel } from '@/core/stamps'
 import type { StampDishSnapshot, StampTier } from '@/core/types'
 
@@ -24,6 +24,12 @@ interface DishStampProps {
   className?: string
   /** 自制菜没有官方 emoji 表项时，传入菜谱自带的图标。 */
   emoji?: string
+  /**
+   * 图鉴未收集的官方菜：强制剪影，且不使用任何真实图片 / 菜品 emoji。
+   * 显式传 false 时，即使没有印章也按已解锁样式渲染（自制菜）。
+   * 不传时沿用旧行为：没有印章即剪影。
+   */
+  locked?: boolean
 }
 
 interface StampArtProps {
@@ -88,39 +94,43 @@ export function DishStamp({
   tilt,
   className,
   emoji: emojiOverride,
+  locked,
 }: DishStampProps) {
   const rawId = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const clipId = `stamp-clip-${rawId}`
   const grainId = `stamp-grain-${rawId}`
 
-  const meta = tier ? STAMP_TIER_META[tier] : null
-  const ringColor = meta?.color ?? '#B9AD9C'
-  const softColor = meta?.soft ?? '#F3EDE3'
-  const silhouette = tier === null
+  const isLocked = locked === true
+  const silhouette = locked ?? tier === null
   const rarity = RARITY_META[dish.rarity]
-  const uploaded = useImageUrl(dish.imageId)
-  const sources = getStampImageSources(dish, uploaded)
-  const emoji = emojiOverride ?? dish.emoji ?? getDishEmoji(dish.id)
+  const uploaded = useImageUrl(isLocked ? undefined : dish.imageId)
+  const sources = isLocked ? [] : getStampImageSources(dish, uploaded)
+  const emoji = isLocked
+    ? ''
+    : (emojiOverride ?? dish.emoji ?? getDishEmoji(dish.id))
   const tierLabel = tier ? getStampTierLabel(tier) : null
   const countText = `×${formatCount(count)}`
 
   const style = {
-    '--stamp-color': ringColor,
-    '--stamp-soft': softColor,
     '--stamp-tilt': `${tilt ?? getStampTilt(dish.id)}deg`,
-    '--stamp-rarity': rarity.color,
   } as CSSProperties
 
-  const label = tier
-    ? `${dish.name}印章，${tierLabel}级，累计打卡 ${count} 次${
-        dateLabel ? `，最近 ${dateLabel}` : ''
-      }`
-    : `${dish.name}印章，尚未收集`
+  const label = isLocked
+    ? '未收集的印章'
+    : tier
+      ? `${dish.name}印章，${tierLabel}级，累计打卡 ${count} 次${
+          dateLabel ? `，最近 ${dateLabel}` : ''
+        }`
+      : `${dish.name}印章，尚未收集`
 
   const classes = [
     'dish-stamp',
     `dish-stamp--${size}`,
-    silhouette ? 'dish-stamp--silhouette' : '',
+    isLocked
+      ? 'dish-stamp--locked'
+      : silhouette
+        ? 'dish-stamp--silhouette'
+        : '',
     animate ? 'dish-stamp--animate' : '',
     className ?? '',
   ]
@@ -131,6 +141,8 @@ export function DishStamp({
     <span
       className={classes}
       style={style}
+      data-rarity={dish.rarity}
+      data-tier={tier ?? 'locked'}
       role={ariaHidden ? undefined : 'img'}
       aria-label={ariaHidden ? undefined : label}
       aria-hidden={ariaHidden ? true : undefined}
@@ -155,21 +167,21 @@ export function DishStamp({
               cx="1"
               cy="1.1"
               r="0.38"
-              fill={ringColor}
+              className="dish-stamp__grain"
               opacity="0.2"
             />
             <circle
               cx="3.1"
               cy="2.6"
               r="0.26"
-              fill="#6B482A"
+              className="dish-stamp__grain-ink"
               opacity="0.12"
             />
             <circle
               cx="2.1"
               cy="3.5"
               r="0.18"
-              fill={ringColor}
+              className="dish-stamp__grain"
               opacity="0.16"
             />
           </pattern>
@@ -179,8 +191,7 @@ export function DishStamp({
           cx="50"
           cy="50"
           r="46.5"
-          fill={softColor}
-          stroke={ringColor}
+          className="dish-stamp__ring"
           strokeWidth="2.6"
         />
         <circle
@@ -194,36 +205,61 @@ export function DishStamp({
           cx="50"
           cy="50"
           r="40"
-          fill="none"
-          stroke={ringColor}
+          className="dish-stamp__rings"
           strokeWidth="1"
           strokeDasharray="2.6 3.2"
           opacity="0.48"
         />
+        {tier && (
+          <g className="dish-stamp__ticks" aria-hidden="true">
+            {tier === 'gold' && (
+              <>
+                <path d="M88 34 L93 32" />
+                <path d="M92 50 L97 50" />
+                <path d="M88 66 L93 68" />
+              </>
+            )}
+            {tier === 'silver' && (
+              <>
+                <path d="M88 34 L93 32" />
+                <path d="M88 66 L93 68" />
+              </>
+            )}
+            {tier === 'bronze' && <path d="M92 50 L97 50" />}
+          </g>
+        )}
 
         <g
           className="dish-stamp__art"
           opacity={silhouette ? 0.52 : 1}
         >
-          <circle
-            cx="50"
-            cy="47"
-            r="25"
-            fill={silhouette ? '#E7DED0' : '#FFFDF8'}
-          />
-          <StampArt
-            key={`${dish.id}-${sources.join('|')}`}
-            sources={sources}
-            clipId={clipId}
-            emoji={emoji}
-          />
+          <circle cx="50" cy="47" r="25" className="dish-stamp__backdrop" />
+          {isLocked ? (
+            <g className="dish-stamp__locked-art">
+              <path d="M29 44h42a21 21 0 0 1-42 0Z" />
+              <rect x="45.5" y="38.5" width="9" height="5" rx="2.5" />
+              <path
+                d="M37 36.5c0-3 2.5-4.5 5-4.5M50 34c0-3.5 3-5.5 6-5M61 37c0-2.5 2-4 4.5-4"
+                fill="none"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                opacity="0.7"
+              />
+            </g>
+          ) : (
+            <StampArt
+              key={`${dish.id}-${sources.join('|')}`}
+              sources={sources}
+              clipId={clipId}
+              emoji={emoji}
+            />
+          )}
         </g>
         <circle
           cx="50"
           cy="47"
           r="25"
-          fill="none"
-          stroke={ringColor}
+          className="dish-stamp__art-ring"
           strokeWidth="1.6"
           opacity="0.72"
         />
@@ -236,25 +272,23 @@ export function DishStamp({
               width="24"
               height="11"
               rx="5.5"
-              fill={rarity.color}
+              className="dish-stamp__rarity-badge"
             />
             <text
               x="65"
               y="21.4"
               className="dish-stamp__rarity"
               textAnchor="middle"
-              fill="#FFFDF8"
             >
               {rarity.label}
             </text>
 
-            <circle cx="26" cy="77" r="8.5" fill={ringColor} />
+            <circle cx="26" cy="77" r="8.5" className="dish-stamp__count-bg" />
             <text
               x="26"
               y="80.2"
               className="dish-stamp__count"
               textAnchor="middle"
-              fill="#FFFDF8"
             >
               {countText}
             </text>
@@ -267,7 +301,6 @@ export function DishStamp({
             y="85.5"
             className="dish-stamp__date"
             textAnchor="middle"
-            fill={ringColor}
           >
             {dateLabel}
           </text>

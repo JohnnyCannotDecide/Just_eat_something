@@ -1,9 +1,8 @@
 import { useId, useState } from 'react'
-import type { CSSProperties } from 'react'
 
 import { RARITY_META } from '@/config/gameConfig'
 
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import type { TodayComponent } from '../../selectors/todayView'
 import { CookingDetails } from './CookingDetails'
 import { DishThumb } from './DishThumb'
@@ -19,6 +18,8 @@ interface ComponentRowProps {
   component: TodayComponent
   disabled: boolean
   checkedIn: boolean
+  /** 未选中的套餐卡只做预览，不提供任何会改动数据的操作。 */
+  readOnly?: boolean
   showCalories: boolean
   undoable: boolean
   onToggleEaten: (component: TodayComponent, eaten: boolean) => void
@@ -31,6 +32,7 @@ export function ComponentRow({
   component,
   disabled,
   checkedIn,
+  readOnly = false,
   showCalories,
   undoable,
   onToggleEaten,
@@ -41,6 +43,7 @@ export function ComponentRow({
   const [showCooking, setShowCooking] = useState(false)
   const inputId = useId()
   const rarity = RARITY_META[component.rarity]
+  const locked = checkedIn || readOnly
   const classNames = [
     'component-row',
     component.discarded ? 'is-discarded' : '',
@@ -52,7 +55,7 @@ export function ComponentRow({
   return (
     <li className={classNames}>
       <div className="component-row__main">
-        {!checkedIn && !component.discarded ? (
+        {!locked && !component.discarded ? (
           <label className="component-check" htmlFor={inputId}>
             <input
               id={inputId}
@@ -92,7 +95,7 @@ export function ComponentRow({
             <strong>{component.name}</strong>
             <span
               className="component-row__rarity"
-              style={{ '--rarity-color': rarity.color } as CSSProperties}
+              data-rarity={component.rarity}
             >
               {rarity.label}
             </span>
@@ -110,7 +113,7 @@ export function ComponentRow({
               ? '自定义记录 · 1 份'
               : `${component.grams ?? 0} g`}
             {' · '}
-            {formatKcal(component.kcal, showCalories)} kcal
+            {formatKcalWithUnit(component.kcal, showCalories)}
           </span>
         </div>
       </div>
@@ -127,7 +130,7 @@ export function ComponentRow({
             {showCooking ? '收起' : '怎么做'}
           </button>
         )}
-        {!checkedIn && !component.discarded && component.canRedraw && (
+        {!locked && !component.discarded && component.canRedraw && (
           <button
             type="button"
             className="component-action"
@@ -137,7 +140,7 @@ export function ComponentRow({
             重抽
           </button>
         )}
-        {!checkedIn && !component.discarded && (
+        {!locked && !component.discarded && (
           <button
             type="button"
             className="component-action component-action--danger"
@@ -147,7 +150,7 @@ export function ComponentRow({
             舍弃
           </button>
         )}
-        {!checkedIn && component.discarded && undoable && (
+        {!locked && component.discarded && undoable && (
           <button
             type="button"
             className="component-action"

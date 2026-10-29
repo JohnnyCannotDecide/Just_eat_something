@@ -16,7 +16,7 @@ import type {
   StampDishSnapshot,
   StampTier,
 } from '@/core/types'
-import { ingredientById } from '@/data'
+import { dishById, ingredientById } from '@/data'
 import {
   createDailyRecord,
   createMealRecord,
@@ -29,7 +29,6 @@ import type {
 import type { DiscardReference } from '@/store/useAppStore'
 
 import { getDishEmoji } from '../dishEmoji'
-import { isCaloriesVisible } from '../formatKcal'
 
 export type TodayMealStatus = MealDayStatus
 export type StampSlot = 'reserved' | 'stamped' | 'custom'
@@ -91,6 +90,8 @@ export interface TodayMealView {
   selectedCombo: TodayComboCandidate | null
   components: TodayComponent[]
   calories: number | null
+  /** 午餐已选套餐缺少主食；只做软提示，不阻止打卡。 */
+  stapleHint: boolean
   allowance: DrawAllowance
   stamps: TodayStamp[]
   stampSlot: StampSlot
@@ -100,8 +101,10 @@ export interface TodayMealView {
 export interface TodayView {
   todayKey: string
   dateLabel: string
-  /** 档案存在且用户打开“显示热量”时为 true。 */
+  /** 是否展示热量数字，只取决于设置开关（游客同样生效）。 */
   showCalories: boolean
+  /** 是否存在身体档案；目标 / 余量 / 进度条额外依赖它。 */
+  hasProfile: boolean
   targetCalories: number | null
   consumedCalories: number
   remainingCalories: number | null
@@ -283,6 +286,17 @@ function buildMeal(
     : selectedRecord
       ? calcMealCalories(selectedRecord.components)
       : null
+  const stapleHint =
+    type === 'lunch' &&
+    !checkedIn &&
+    selectedCombo !== null &&
+    selectedCombo.activeComponents.length > 0 &&
+    !selectedCombo.activeComponents.some(
+      (component) =>
+        component.category === 'staple' ||
+        (component.dishId !== null &&
+          dishById.get(component.dishId)?.providesStaple === true),
+    )
   const mealStamps = buildStamps(selectedCombo, checkedIn, stamps)
   const stampSlot: StampSlot =
     mealStamps.length > 0
@@ -318,6 +332,7 @@ function buildMeal(
     selectedCombo,
     components,
     calories,
+    stapleHint,
     allowance: getDrawAllowance(
       checkedIn ? markMealCheckedIn(record.budget) : record.budget,
       tokenCount,
@@ -356,7 +371,9 @@ export function buildTodayView(
       meal.status === 'checkedIn' ? sum + (meal.calories ?? 0) : sum,
     0,
   )
-  const targetCalories = data.targetCalories
+  const hasProfile = data.profile !== null
+  // 没有档案时不进入视图：目标是档案的结果，不能只靠残留缓存展示。
+  const targetCalories = hasProfile ? data.targetCalories : null
   const remainingCalories =
     targetCalories === null ? null : targetCalories - consumedCalories
   const overCalories =
@@ -374,10 +391,8 @@ export function buildTodayView(
   return {
     todayKey,
     dateLabel: formatDateLabel(todayKey),
-    showCalories: isCaloriesVisible(
-      data.profile,
-      data.settings.showCalories,
-    ),
+    showCalories: data.settings.showCalories,
+    hasProfile,
     targetCalories,
     consumedCalories,
     remainingCalories,

@@ -14,9 +14,9 @@ export function GuestHintCard({
           🌱
         </span>
         <div>
-          <p className="guest-hint__title">热量先藏起来啦</p>
+          <p className="guest-hint__title">想看看今天还剩多少？</p>
           <p className="guest-hint__text">
-            填写个人档案后，可以估算每日目标并显示热量；不填也能继续记录。
+            填一份个人档案，就能看到每日目标和余量；不填也能继续记录。
           </p>
         </div>
       </div>
@@ -26,7 +26,7 @@ export function GuestHintCard({
           className="guest-hint__cta"
           onClick={onOpenProfile}
         >
-          去填写
+          填写档案
         </button>
         <button
           type="button"

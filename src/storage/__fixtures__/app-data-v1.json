@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "profile": {
+    "sex": "female",
+    "age": 30,
+    "heightCm": 165,
+    "weightKg": 60,
+    "activity": "sedentary",
+    "goal": "maintain"
+  },
+  "targetCalories": 1584,
+  "pityCount": 7,
+  "days": {
+    "2026-10-26": {
+      "dateKey": "2026-10-26",
+      "meals": {
+        "breakfast": {
+          "candidateDishIds": ["dish_a", "dish_b"],
+          "selectedDishId": "dish_a",
+          "calories": 300,
+          "actualGrams": {},
+          "budget": { "baseUsed": 1, "adUsed": 0, "checkedIn": true }
+        },
+        "lunch": {
+          "candidateDishIds": [],
+          "selectedDishId": null,
+          "calories": null,
+          "actualGrams": {},
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false }
+        },
+        "dinner": {
+          "candidateDishIds": [],
+          "selectedDishId": null,
+          "calories": null,
+          "actualGrams": {},
+          "budget": { "baseUsed": 0, "adUsed": 0, "checkedIn": false }
+        }
+      },
+      "tokens": {
+        "dateKey": "2026-10-26",
+        "count": 2,
+        "customRewardClaimed": false
+      }
+    }
+  },
+  "stamps": {
+    "dish_a": {
+      "checkInCount": 2,
+      "firstCheckInDate": "2026-10-25",
+      "checkInDates": ["2026-10-25", "2026-10-26"]
+    }
+  }
+}

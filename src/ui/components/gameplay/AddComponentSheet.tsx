@@ -2,7 +2,7 @@ import { useId, useMemo, useState } from 'react'
 
 import type { Dish, MealType, Rarity } from '@/core/types'
 
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import {
   createCustomDraft,
   parseCustomMealDraft,
@@ -173,7 +173,7 @@ export function AddComponentSheet({
                     </span>
                     <span className="add-dish-row__kcal">
                       {dish.isCustom
-                        ? `${formatKcal(dish.calories, showCalories)} kcal`
+                        ? formatKcalWithUnit(dish.calories, showCalories)
                         : `${Math.round(
                             dish.ingredients.reduce(
                               (sum, item) => sum + item.grams,

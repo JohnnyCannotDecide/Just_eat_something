@@ -1,10 +1,13 @@
 import {
   ACTIVITY_LEVELS,
+  DEFAULT_THEME,
   GOAL_ADJUSTMENTS,
   MEALS,
   RARITY_ORDER,
   customDishAllowedRarities,
+  isThemeName,
 } from '@/config/gameConfig'
+import type { ThemeName } from '@/config/gameConfig'
 import {
   createLegacyCandidate,
   createLegacyCustomCandidate,
@@ -21,6 +24,7 @@ import type {
   CalorieGoal,
   CalorieMode,
   ComboCandidateSnapshot,
+  ComboNameSource,
   ComboSource,
   ComponentIngredientSnapshot,
   ComponentKind,
@@ -46,9 +50,13 @@ import {
   isMealType,
 } from '@/data/dataRules'
 
+import { comboById } from '@/data'
+
+import { LEGACY_COMBO_NAMES } from './legacyComboNames'
+import type { SnapshotService } from './snapshots'
 import type { StorageAdapter } from './StorageAdapter'
 
-export const APP_DATA_SCHEMA_VERSION = 2
+export const APP_DATA_SCHEMA_VERSION = 5
 export const APP_DATA_STORAGE_KEY = 'app-data'
 /** 结构损坏但仍是合法 JSON 时，原始值会先备份到这里再以空数据启动。 */
 export const APP_DATA_CORRUPT_BACKUP_KEY = 'app-data:corrupt-backup'
@@ -57,6 +65,8 @@ export interface AppSettings {
   showCalories: boolean
   /** 今日页游客提示是否已被用户关闭。 */
   profileHintDismissed: boolean
+  /** 展示主题；缺失或值非法时回退 cute。 */
+  theme: ThemeName
 }
 
 export interface MealRecord {
@@ -68,6 +78,8 @@ export interface MealRecord {
   calories: number | null
   /** 复用核心的 baseUsed / adUsed / checkedIn。 */
   budget: MealDrawBudget
+  /** 本轮已经抽到的套餐 id；旧数据缺省时从候选推导。 */
+  drawnComboIds?: string[]
 }
 
 export interface DailyRecord {
@@ -104,11 +116,14 @@ export interface AppData {
 }
 
 type UnknownRecord = Record<string, unknown>
-type Migration = (data: UnknownRecord) => UnknownRecord
+export type AppDataMigration = (data: UnknownRecord) => UnknownRecord
 
 /** 迁移链：目标版本 → 从上一版升级到该版本的纯函数。 */
-const APP_DATA_MIGRATIONS: Record<number, Migration> = {
+const APP_DATA_MIGRATIONS: Record<number, AppDataMigration> = {
   2: migrateV1ToV2,
+  3: migrateV2ToV3,
+  4: migrateV3ToV4,
+  5: migrateV4ToV5,
 }
 
 export function createMealRecord(): MealRecord {
@@ -117,12 +132,16 @@ export function createMealRecord(): MealRecord {
     selectedCandidateId: null,
     calories: null,
     budget: createMealDrawBudget(),
+    drawnComboIds: [],
   }
 }
 
 /** v1 单菜记录 → v2 单部件临时套餐；纯函数且可重复调用。 */
 export function migrateV1ToV2(raw: UnknownRecord): UnknownRecord {
-  if (raw.schemaVersion === 2) {
+  if (
+    typeof raw.schemaVersion === 'number' &&
+    raw.schemaVersion >= 2
+  ) {
     return raw
   }
 
@@ -140,6 +159,293 @@ export function migrateV1ToV2(raw: UnknownRecord): UnknownRecord {
   }
 
   return { ...raw, schemaVersion: 2, days }
+}
+
+/**
+ * v2 → v3：热量展示改为默认开启。
+ * v2 无法区分「用户主动关闭」和「旧版无档案强制关闭」，按 v3 规则统一置为 true。
+ * 其余设置（如 profileHintDismissed）与未知字段原样保留。
+ */
+export function migrateV2ToV3(raw: UnknownRecord): UnknownRecord {
+  if (
+    typeof raw.schemaVersion === 'number' &&
+    raw.schemaVersion >= 3
+  ) {
+    return raw
+  }
+
+  const settings = isRecord(raw.settings) ? raw.settings : {}
+  return {
+    ...raw,
+    schemaVersion: 3,
+    settings: {
+      ...settings,
+      showCalories: true,
+      theme: isThemeName(settings.theme) ? settings.theme : DEFAULT_THEME,
+    },
+  }
+}
+
+function nonEmptyText(value: unknown): string | null {
+  if (typeof value !== 'string') {
+    return null
+  }
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+function isComboNameSource(value: unknown): value is ComboNameSource {
+  return value === 'auto' || value === 'manual' || value === 'legacy'
+}
+
+function truncateName(value: string): string {
+  return Array.from(value).slice(0, 10).join('')
+}
+
+function activeDishIdsFromComponents(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  const ids: string[] = []
+  for (const item of value) {
+    if (
+      !isRecord(item) ||
+      item.discarded === true ||
+      item.kind !== 'dish' ||
+      typeof item.dishId !== 'string' ||
+      item.dishId.length === 0
+    ) {
+      continue
+    }
+    ids.push(item.dishId)
+  }
+  return ids
+}
+
+function fallbackCandidateName(raw: UnknownRecord): string {
+  const baseName = nonEmptyText(raw.baseName)
+  if (baseName) {
+    return baseName
+  }
+
+  const comboId = typeof raw.comboId === 'string' ? raw.comboId : null
+  const legacyName = comboId ? LEGACY_COMBO_NAMES[comboId] : undefined
+  if (legacyName) {
+    return legacyName
+  }
+
+  if (Array.isArray(raw.components)) {
+    const names: string[] = []
+    for (const item of raw.components) {
+      if (!isRecord(item) || item.discarded === true) {
+        continue
+      }
+      const name = nonEmptyText(item.name)
+      if (name) {
+        names.push(name)
+      }
+    }
+    if (names.length > 0) {
+      return truncateName(names.slice(0, 2).join('和'))
+    }
+  }
+
+  return '旧套餐'
+}
+
+function migrateCandidateV4(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value
+  }
+
+  const name = nonEmptyText(value.name) ?? fallbackCandidateName(value)
+  const manualName = nonEmptyText(value.manualName)
+  const nameSource: ComboNameSource = isComboNameSource(value.nameSource)
+    ? value.nameSource
+    : manualName
+      ? 'manual'
+      : 'legacy'
+  const comboId = typeof value.comboId === 'string' ? value.comboId : null
+  const combo = comboId ? comboById.get(comboId) : undefined
+  const existingBaseDishIds =
+    Array.isArray(value.baseDishIds) &&
+    value.baseDishIds.every((id) => typeof id === 'string')
+      ? (value.baseDishIds as string[])
+      : null
+  const baseDishIds =
+    existingBaseDishIds ??
+    combo?.components ??
+    activeDishIdsFromComponents(value.components)
+  const finalManual = manualName ?? (nameSource === 'manual' ? name : null)
+
+  const migrated: UnknownRecord = {
+    ...value,
+    name,
+    nameSource,
+    baseName: nonEmptyText(value.baseName) ?? name,
+    baseDishIds: [...baseDishIds],
+  }
+  if (finalManual) {
+    migrated.manualName = finalManual
+  }
+  return migrated
+}
+
+/**
+ * v3 → v4：套餐命名快照。
+ * v3 及更早只有 name，没有命名来源、手动名和原始组合基准；
+ * 缺失 name 的旧候选按“原名”兜底，绝不因为缺名字丢弃候选。
+ */
+export function migrateV3ToV4(raw: UnknownRecord): UnknownRecord {
+  if (
+    typeof raw.schemaVersion === 'number' &&
+    raw.schemaVersion >= 4
+  ) {
+    return raw
+  }
+
+  if (!isRecord(raw.days)) {
+    return { ...raw, schemaVersion: 4 }
+  }
+
+  const days: UnknownRecord = {}
+  for (const [dateKey, rawDay] of Object.entries(raw.days)) {
+    if (!isRecord(rawDay)) {
+      days[dateKey] = rawDay
+      continue
+    }
+    const rawMeals = isRecord(rawDay.meals) ? rawDay.meals : {}
+    const meals: UnknownRecord = { ...rawMeals }
+    for (const meal of MEALS) {
+      const rawMeal = rawMeals[meal.type]
+      if (!isRecord(rawMeal) || !Array.isArray(rawMeal.candidateCombos)) {
+        continue
+      }
+      meals[meal.type] = {
+        ...rawMeal,
+        candidateCombos: rawMeal.candidateCombos.map(migrateCandidateV4),
+      }
+    }
+    days[dateKey] = { ...rawDay, meals }
+  }
+
+  return { ...raw, schemaVersion: 4, days }
+}
+
+function uniqueStringIds(value: unknown): string[] | null {
+  if (!Array.isArray(value)) {
+    return null
+  }
+  const ids = value.filter(
+    (id): id is string => typeof id === 'string' && id.length > 0,
+  )
+  // 全部无效时视为缺省，交给调用方回退；部分无效只丢弃无效项，保留有效数据。
+  if (value.length > 0 && ids.length === 0) {
+    return null
+  }
+  return [...new Set(ids)]
+}
+
+function migrateComponentV5(value: unknown, checkedIn: boolean): unknown {
+  if (!isRecord(value)) {
+    return value
+  }
+
+  const existing = uniqueStringIds(value.seenDishIds)
+  if (existing) {
+    return { ...value, seenDishIds: existing }
+  }
+
+  const dishId =
+    value.kind === 'dish' &&
+    typeof value.dishId === 'string' &&
+    value.dishId.length > 0
+      ? value.dishId
+      : null
+  return {
+    ...value,
+    seenDishIds: checkedIn || dishId === null ? [] : [dishId],
+  }
+}
+
+function migrateCandidateV5(value: unknown, checkedIn: boolean): unknown {
+  if (!isRecord(value) || !Array.isArray(value.components)) {
+    return value
+  }
+  return {
+    ...value,
+    components: value.components.map((component) =>
+      migrateComponentV5(component, checkedIn),
+    ),
+  }
+}
+
+function migrateMealV5(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value
+  }
+
+  const checkedIn =
+    isRecord(value.budget) && value.budget.checkedIn === true
+  const candidateCombos = Array.isArray(value.candidateCombos)
+    ? value.candidateCombos.map((candidate) =>
+        migrateCandidateV5(candidate, checkedIn),
+      )
+    : value.candidateCombos
+
+  let drawnComboIds = uniqueStringIds(value.drawnComboIds)
+  if (!drawnComboIds && Array.isArray(candidateCombos)) {
+    drawnComboIds = [
+      ...new Set(
+        candidateCombos.flatMap((candidate) =>
+          isRecord(candidate) &&
+          typeof candidate.comboId === 'string' &&
+          candidate.comboId.length > 0
+            ? [candidate.comboId]
+            : [],
+        ),
+      ),
+    ]
+  }
+
+  return {
+    ...value,
+    ...(candidateCombos !== undefined ? { candidateCombos } : {}),
+    ...(drawnComboIds ? { drawnComboIds } : {}),
+  }
+}
+
+/**
+ * v4 → v5：部件槽位 seenDishIds 与套餐本轮抽取记录。
+ * 开放中的候选初始 seen 为 [当前 dishId]；已打卡历史为空，不追溯。
+ * drawnComboIds 缺失时从现有候选推导，保持“已抽过的不再重复”的旧行为。
+ */
+export function migrateV4ToV5(raw: UnknownRecord): UnknownRecord {
+  if (typeof raw.schemaVersion === 'number' && raw.schemaVersion >= 5) {
+    return raw
+  }
+
+  if (!isRecord(raw.days)) {
+    return { ...raw, schemaVersion: 5 }
+  }
+
+  const days: UnknownRecord = {}
+  for (const [dateKey, rawDay] of Object.entries(raw.days)) {
+    if (!isRecord(rawDay)) {
+      days[dateKey] = rawDay
+      continue
+    }
+    const rawMeals = isRecord(rawDay.meals) ? rawDay.meals : {}
+    const meals: UnknownRecord = { ...rawMeals }
+    for (const meal of MEALS) {
+      if (rawMeals[meal.type] !== undefined) {
+        meals[meal.type] = migrateMealV5(rawMeals[meal.type])
+      }
+    }
+    days[dateKey] = { ...rawDay, meals }
+  }
+
+  return { ...raw, schemaVersion: 5, days }
 }
 
 function migrateV1Day(rawDay: UnknownRecord, dateKey: string): UnknownRecord {
@@ -320,8 +626,9 @@ export function createEmptyAppData(todayKey: string = toDateKey()): AppData {
     customIngredients: [],
     customDishes: [],
     settings: {
-      showCalories: false,
+      showCalories: true,
       profileHintDismissed: false,
+      theme: DEFAULT_THEME,
     },
   }
 }
@@ -381,7 +688,10 @@ export function serializeAppData(data: AppData): string {
   return JSON.stringify(data, null, 2)
 }
 
-export function migrateAppData(raw: unknown): UnknownRecord {
+export function migrateAppData(
+  raw: unknown,
+  migrations: Record<number, AppDataMigration> = APP_DATA_MIGRATIONS,
+): UnknownRecord {
   if (!isRecord(raw)) {
     throw new TypeError('应用数据必须是对象')
   }
@@ -404,7 +714,7 @@ export function migrateAppData(raw: unknown): UnknownRecord {
   let migrated = raw
   for (let from = version; from < APP_DATA_SCHEMA_VERSION; from += 1) {
     const targetVersion = from + 1
-    const migration = APP_DATA_MIGRATIONS[targetVersion]
+    const migration = migrations[targetVersion]
     if (!migration) {
       throw new Error(`缺少从 v${from} 到 v${targetVersion} 的迁移`)
     }
@@ -417,8 +727,9 @@ export function migrateAppData(raw: unknown): UnknownRecord {
 export function normalizeAppData(
   raw: unknown,
   todayKey: string = toDateKey(),
+  migrations: Record<number, AppDataMigration> = APP_DATA_MIGRATIONS,
 ): AppData {
-  const source = migrateAppData(raw)
+  const source = migrateAppData(raw, migrations)
   const profile = normalizeProfile(source.profile)
   const targetCalories = profile
     ? calcTargetCalories(profile)
@@ -454,26 +765,264 @@ export function parseAppDataJson(
   return normalizeAppData(raw, todayKey)
 }
 
+export type LoadAppDataStatus =
+  | 'new'
+  | 'ok'
+  | 'migrated'
+  | 'future'
+  | 'corrupt'
+  | 'migration-failed'
+  | 'unavailable'
+
+export interface LoadAppDataResult {
+  status: LoadAppDataStatus
+  data: AppData
+  raw: string | null
+  sourceVersion: number | null
+  error: string | null
+  snapshotId: string | null
+}
+
+export interface LoadAppDataOptions {
+  snapshots?: SnapshotService
+  migrations?: Record<number, AppDataMigration>
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+async function backupCorruptRaw(
+  adapter: StorageAdapter,
+  raw: string,
+): Promise<void> {
+  try {
+    // 保存原始字符串，而不是重新 JSON.stringify 后可能丢失细节的对象。
+    await adapter.setRaw(APP_DATA_CORRUPT_BACKUP_KEY, raw)
+  } catch {
+    // 备份失败也不能覆盖主键；原始值仍在 app-data 里。
+  }
+}
+
+async function recoverableResult(
+  adapter: StorageAdapter,
+  snapshots: SnapshotService | undefined,
+  raw: string,
+  sourceVersion: number | null,
+  error: string,
+  todayKey: string,
+): Promise<LoadAppDataResult> {
+  await backupCorruptRaw(adapter, raw)
+
+  let snapshotId: string | null = null
+  if (snapshots) {
+    try {
+      const snapshot = await snapshots.capture({
+        reason: 'before-recovery',
+        data: null,
+        raw,
+      })
+      snapshotId = snapshot.id
+    } catch {
+      // 恢复界面仍然可以下载原始 raw；快照失败不阻止进入恢复模式。
+    }
+  }
+
+  return {
+    status: 'corrupt',
+    data: createEmptyAppData(todayKey),
+    raw,
+    sourceVersion,
+    error,
+    snapshotId,
+  }
+}
+
+/**
+ * 先读原始字符串，再决定是否写盘。只有“全新用户”和“迁移成功”两条路径会写
+ * app-data；正常 v2 数据、坏数据、未来版本都不会被默认值覆盖。
+ */
 export async function loadAppData(
   adapter: StorageAdapter,
   todayKey: string = toDateKey(),
-): Promise<AppData> {
-  const raw = await adapter.get<unknown>(APP_DATA_STORAGE_KEY)
-  if (raw === null || raw === undefined) {
-    return createEmptyAppData(todayKey)
+  options: LoadAppDataOptions = {},
+): Promise<LoadAppDataResult> {
+  let rawText: string | null
+  try {
+    rawText = await adapter.getRaw(APP_DATA_STORAGE_KEY)
+  } catch (error) {
+    return {
+      status: 'unavailable',
+      data: createEmptyAppData(todayKey),
+      raw: null,
+      sourceVersion: null,
+      error: errorText(error),
+      snapshotId: null,
+    }
+  }
+
+  if (rawText === null) {
+    return {
+      status: 'new',
+      data: createEmptyAppData(todayKey),
+      raw: null,
+      sourceVersion: null,
+      error: null,
+      snapshotId: null,
+    }
+  }
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(rawText) as unknown
+  } catch {
+    return recoverableResult(
+      adapter,
+      options.snapshots,
+      rawText,
+      null,
+      '应用数据不是合法的 JSON',
+      todayKey,
+    )
+  }
+
+  if (!isRecord(parsed)) {
+    return recoverableResult(
+      adapter,
+      options.snapshots,
+      rawText,
+      null,
+      '应用数据必须是对象',
+      todayKey,
+    )
+  }
+
+  const version = parsed.schemaVersion
+  if (
+    typeof version !== 'number' ||
+    !Number.isInteger(version) ||
+    version < 1
+  ) {
+    return recoverableResult(
+      adapter,
+      options.snapshots,
+      rawText,
+      null,
+      '应用数据缺少有效的 schemaVersion',
+      todayKey,
+    )
+  }
+
+  if (version > APP_DATA_SCHEMA_VERSION) {
+    // 未来版本必须拒绝启动，避免旧版本把新数据写坏。
+    return {
+      status: 'future',
+      data: createEmptyAppData(todayKey),
+      raw: rawText,
+      sourceVersion: version,
+      error: `应用数据版本 ${version} 高于当前支持的版本 ${APP_DATA_SCHEMA_VERSION}，请升级应用`,
+      snapshotId: null,
+    }
+  }
+
+  if (version < APP_DATA_SCHEMA_VERSION) {
+    if (!options.snapshots) {
+      return {
+        status: 'migration-failed',
+        data: createEmptyAppData(todayKey),
+        raw: rawText,
+        sourceVersion: version,
+        error: '没有可用的本地快照服务，已停止升级以保护原数据',
+        snapshotId: null,
+      }
+    }
+
+    let snapshotId: string
+    try {
+      const snapshot = await options.snapshots.capture({
+        reason: 'migration',
+        data: null,
+        raw: rawText,
+      })
+      snapshotId = snapshot.id
+    } catch (error) {
+      return {
+        status: 'migration-failed',
+        data: createEmptyAppData(todayKey),
+        raw: rawText,
+        sourceVersion: version,
+        error: `升级前快照失败，已停止升级：${errorText(error)}`,
+        snapshotId: null,
+      }
+    }
+
+    let migrated: AppData
+    try {
+      migrated = normalizeAppData(parsed, todayKey, options.migrations)
+    } catch (error) {
+      await backupCorruptRaw(adapter, rawText)
+      return {
+        status: 'migration-failed',
+        data: createEmptyAppData(todayKey),
+        raw: rawText,
+        sourceVersion: version,
+        error: `数据升级失败：${errorText(error)}`,
+        snapshotId,
+      }
+    }
+
+    const nextRaw = serializeAppData(migrated)
+    try {
+      await adapter.setRaw(APP_DATA_STORAGE_KEY, nextRaw)
+      // localStorage 只写一个 key，写后读回可避免把“看似成功”的半迁移留在盘上。
+      const readBack = await adapter.getRaw(APP_DATA_STORAGE_KEY)
+      if (readBack !== nextRaw) {
+        throw new Error('写入后读回校验不一致')
+      }
+    } catch (error) {
+      try {
+        await adapter.setRaw(APP_DATA_STORAGE_KEY, rawText)
+      } catch {
+        // 回滚失败时原始值仍在快照里；恢复界面会提供下载/恢复。
+      }
+      return {
+        status: 'migration-failed',
+        data: createEmptyAppData(todayKey),
+        raw: rawText,
+        sourceVersion: version,
+        error: `数据升级写入失败：${errorText(error)}`,
+        snapshotId,
+      }
+    }
+
+    return {
+      status: 'migrated',
+      data: migrated,
+      raw: nextRaw,
+      sourceVersion: version,
+      error: null,
+      snapshotId,
+    }
   }
 
   try {
-    return normalizeAppData(raw, todayKey)
-  } catch (error) {
-    // 未来版本的 schema 必须拒绝启动，避免旧版本覆盖新数据。
-    if (isFutureSchema(raw)) {
-      throw error
+    return {
+      status: 'ok',
+      data: normalizeAppData(parsed, todayKey, options.migrations),
+      raw: rawText,
+      sourceVersion: version,
+      error: null,
+      snapshotId: null,
     }
-
-    // 合法 JSON 但结构坏了：先留一份原始备份，再以空数据自愈。
-    await backupCorruptData(adapter, raw)
-    return createEmptyAppData(todayKey)
+  } catch (error) {
+    return recoverableResult(
+      adapter,
+      options.snapshots,
+      rawText,
+      version,
+      `应用数据结构损坏：${errorText(error)}`,
+      todayKey,
+    )
   }
 }
 
@@ -487,40 +1036,13 @@ export async function saveAppData(
 /**
  * 清空全部业务数据。
  * 写空数据而不是 remove：即使中途失败，存储里也不会留下半本旧记录。
+ * 不删除 corrupt-backup：它可能是用户找回旧数据的最后一份原文。
  */
 export async function clearAppData(
   adapter: StorageAdapter,
   todayKey: string = toDateKey(),
 ): Promise<void> {
   await saveAppData(adapter, createEmptyAppData(todayKey))
-  try {
-    await adapter.remove(APP_DATA_CORRUPT_BACKUP_KEY)
-  } catch {
-    // 备份清理只是顺手的事，失败不该阻止清空主数据。
-  }
-}
-
-function isFutureSchema(raw: unknown): boolean {
-  if (!isRecord(raw)) {
-    return false
-  }
-  const version = raw.schemaVersion
-  return (
-    typeof version === 'number' &&
-    Number.isInteger(version) &&
-    version > APP_DATA_SCHEMA_VERSION
-  )
-}
-
-async function backupCorruptData(
-  adapter: StorageAdapter,
-  raw: unknown,
-): Promise<void> {
-  try {
-    await adapter.set(APP_DATA_CORRUPT_BACKUP_KEY, raw)
-  } catch {
-    // 备份失败也要让用户能启动，原始值由适配器的存储键保留。
-  }
 }
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -683,11 +1205,31 @@ function normalizeMealRecord(value: unknown): MealRecord {
       ? value.selectedCandidateId
       : null
 
+  const normalizedDrawn = Array.isArray(value.drawnComboIds)
+    ? [
+        ...new Set(
+          value.drawnComboIds.filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+        ),
+      ]
+    : null
+  const drawnComboIds =
+    normalizedDrawn ??
+    [
+      ...new Set(
+        candidateCombos.flatMap((candidate) =>
+          candidate.comboId ? [candidate.comboId] : [],
+        ),
+      ),
+    ]
+
   return {
     candidateCombos,
     selectedCandidateId,
     calories: isNonNegativeFinite(value.calories) ? value.calories : null,
     budget: normalizeBudget(value.budget),
+    drawnComboIds,
   }
 }
 
@@ -719,6 +1261,18 @@ function isDishCategoryValue(value: unknown): value is DishCategory {
   return typeof value === 'string' && isDishCategory(value)
 }
 
+function fallbackNameFromComponents(
+  components: readonly MealComponentSnapshot[],
+): string | null {
+  const names = components
+    .filter((component) => !component.discarded && component.name.trim().length > 0)
+    .map((component) => component.name.trim())
+  if (names.length === 0) {
+    return null
+  }
+  return truncateName(names.slice(0, 2).join('和'))
+}
+
 function normalizeComboCandidate(
   value: unknown,
 ): ComboCandidateSnapshot | null {
@@ -727,13 +1281,8 @@ function normalizeComboCandidate(
   }
 
   const id = typeof value.id === 'string' && value.id.length > 0 ? value.id : null
-  const name =
-    typeof value.name === 'string' && value.name.length > 0
-      ? value.name
-      : null
   if (
     !id ||
-    !name ||
     !isRarity(value.rarity) ||
     !isComboSource(value.source) ||
     !Array.isArray(value.components)
@@ -754,15 +1303,68 @@ function normalizeComboCandidate(
     return null
   }
 
+  const comboId = typeof value.comboId === 'string' ? value.comboId : null
+  const manualName = nonEmptyText(value.manualName)
+  const nameSource: ComboNameSource = isComboNameSource(value.nameSource)
+    ? value.nameSource
+    : manualName
+      ? 'manual'
+      : 'legacy'
+  const name =
+    nonEmptyText(value.name) ??
+    nonEmptyText(value.baseName) ??
+    (comboId ? LEGACY_COMBO_NAMES[comboId] : undefined) ??
+    fallbackNameFromComponents(components) ??
+    '旧套餐'
+  const combo = comboId ? comboById.get(comboId) : undefined
+  let baseDishIds: string[]
+  if (
+    Array.isArray(value.baseDishIds) &&
+    value.baseDishIds.every((dishId) => typeof dishId === 'string')
+  ) {
+    baseDishIds = [...value.baseDishIds]
+  } else if (combo) {
+    baseDishIds = [...combo.components]
+  } else {
+    baseDishIds = components.flatMap((component) =>
+      !component.discarded &&
+      component.kind === 'dish' &&
+      component.dishId
+        ? [component.dishId]
+        : [],
+    )
+  }
+  const finalManual = manualName ?? (nameSource === 'manual' ? name : null)
+
   return {
     id,
-    comboId: typeof value.comboId === 'string' ? value.comboId : null,
+    comboId,
     source: value.source,
     name,
+    nameSource,
+    ...(finalManual ? { manualName: finalManual } : {}),
+    baseName: nonEmptyText(value.baseName) ?? name,
+    baseDishIds,
     rarity: value.rarity,
     ...(typeof value.tip === 'string' ? { tip: value.tip } : {}),
     components,
   }
+}
+
+function normalizeSeenDishIds(
+  value: unknown,
+  fallback: readonly string[],
+): string[] {
+  if (!Array.isArray(value)) {
+    return [...fallback]
+  }
+  return [
+    ...new Set(
+      value.filter(
+        (id): id is string => typeof id === 'string' && id.length > 0,
+      ),
+    ),
+  ]
 }
 
 function normalizeComponent(value: unknown): MealComponentSnapshot | null {
@@ -801,6 +1403,7 @@ function normalizeComponent(value: unknown): MealComponentSnapshot | null {
       calories: isNonNegativeFinite(value.calories) ? value.calories : null,
       eaten: typeof value.eaten === 'boolean' ? value.eaten : true,
       discarded: value.discarded === true,
+      seenDishIds: normalizeSeenDishIds(value.seenDishIds, []),
     }
   }
 
@@ -865,6 +1468,7 @@ function normalizeComponent(value: unknown): MealComponentSnapshot | null {
     calories: isNonNegativeFinite(value.calories) ? value.calories : null,
     eaten: typeof value.eaten === 'boolean' ? value.eaten : true,
     discarded: value.discarded === true,
+    seenDishIds: normalizeSeenDishIds(value.seenDishIds, [dishId]),
   }
 }
 
@@ -901,15 +1505,16 @@ function normalizeSettings(
   const hasProfile = profile !== null
 
   return {
-    // 没有档案时无法计算目标，开关必须保持关闭。
+    // 展示开关与档案无关；缺字段的旧数据默认开启。
     showCalories:
-      hasProfile &&
-      (typeof raw.showCalories === 'boolean' ? raw.showCalories : true),
+      typeof raw.showCalories === 'boolean' ? raw.showCalories : true,
     // 老用户有档案时默认不再提示；显式值（包括 false）优先保留。
     profileHintDismissed:
       typeof raw.profileHintDismissed === 'boolean'
         ? raw.profileHintDismissed
         : hasProfile,
+    // v3 已声明 theme；缺失/非法值回退默认主题，合法值原样保留。
+    theme: isThemeName(raw.theme) ? raw.theme : DEFAULT_THEME,
   }
 }
 

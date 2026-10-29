@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 
 import { STATUS_LABELS } from '../../copy'
-import { formatKcal } from '../../formatKcal'
+import { formatKcalWithUnit } from '../../formatKcal'
 import { buildDayDetailView } from '../../selectors/calendarView'
 import type { TodayMealView } from '../../selectors/todayView'
 import { ModalShell } from '../gameplay/ModalShell'
@@ -40,9 +40,7 @@ function DayMealCard({ meal, showCalories }: DayMealCardProps) {
           <>
             <p className="day-detail__combo-name">
               <strong>{selected.name}</strong>
-              <span>
-                {formatKcal(meal.calories, showCalories)} kcal
-              </span>
+              <span>{formatKcalWithUnit(meal.calories, showCalories)}</span>
             </p>
 
             <ComponentList
@@ -149,8 +147,7 @@ export function DayDetailSheet({
         <div className="day-detail__total">
           <span>当日合计</span>
           <strong>
-            {formatKcal(view.dayCalories, view.showCalories)}
-            <small> kcal</small>
+            {formatKcalWithUnit(view.dayCalories, view.showCalories)}
           </strong>
         </div>
 
