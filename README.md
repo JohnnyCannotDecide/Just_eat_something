@@ -6,7 +6,7 @@
 - **数据**：主数据保存在浏览器 `localStorage`，自制菜图片保存在 `IndexedDB`，都只通过 `src/storage` 的端口访问。应用是本地优先的；可选的云同步把数据备份到你自己的 Cloudflare D1（Pages Functions），不开也能正常使用，见第 8 节与 [DEPLOY.md](DEPLOY.md)。
 - **规则**：概率、保底、次数、印章阈值等数值只有一处来源 —— `src/config/gameConfig.ts`。
 
-详情可见：https://bento-handbook.pages.dev/
+网址：https://bento-handbook.pages.dev/
 ---
 
 ## 1. 运行
