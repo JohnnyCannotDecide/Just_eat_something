@@ -73,6 +73,15 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
 - 稀有度和印章颜色通过 `data-rarity` / `data-tier` 映射为局部变量，组件不把颜色写进内联样式；铜 / 银 / 金印章除颜色外还有 1 / 2 / 3 段外环刻度作为冗余线索。
 - `src/ui/styles/themes.css` 只放无法用变量表达的结构差异，并在 `global.css` 最后引入。
 
+#### 新增一套主题
+
+1. **`src/config/gameConfig.ts`**：把新 id 加进 `THEME_IDS`（按需调整 `DEFAULT_THEME`）。`ThemeName`、`isThemeName`、存档归一化和 `THEME_OPTIONS` 的类型会一起更新；旧数据里的非法主题仍回退到 `DEFAULT_THEME`。
+2. **`src/ui/theme.ts`**：在 `THEME_OPTIONS` 里加一项 `{ id, label, description, themeColor, colorScheme }`。设置页的预览卡按这个数组渲染；`applyTheme` 用它同步 `data-theme`、`meta[name="theme-color"]` 和 `meta[name="color-scheme"]`。
+3. **`src/ui/styles/tokens.css`**：复制一个现有主题块，改成 `[data-theme='<id>'] { ... }`，写全 `tokens.test.ts` 的 `requiredThemeTokens`（表面、文本、强调与线条、稀有度、印章、阴影等），并显式声明 `color-scheme` 和圆角。主题块里的 `var()` 要在声明处写最终值，不要做跨层别名；原始颜色、阴影等字面量只允许出现在这个文件。
+4. **`src/ui/styles/themes.css`**：只补充变量表达不了的结构差异（透明纹理、胶带、描边材质等），选择器同样用 `[data-theme='<id>']`。
+5. **`index.html`**：在首屏同步脚本的 `themes` 映射里补上 `id: [themeColor, colorScheme]`，顺序和值必须与 `THEME_OPTIONS` 完全一致；否则首屏会先按默认主题绘制再闪一下。
+6. **验证**：`npm test` 会检查令牌齐全 / 三套主题一致、`themeContrast.test.ts` 的文字对比度与色差、以及 `index.html` 映射是否同步；随后 `npm run dev`，在设置页切换预览卡确认实际观感。
+
 日历与日详情全部基于当天的套餐快照渲染，因此迁移后的旧记录、已归档或已从菜谱删除的菜品都还能正常显示；热量一律走 `formatKcal` / `formatKcalWithUnit`，没有档案也会显示数字（只要「显示热量」开关开着）。
 
 ---
@@ -112,9 +121,11 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
    - `category` 只能是 `staple` / `main` / `soup` / `drink` / `veg` / `fruit` / `snack`。
    - `meals` 是 `breakfast` / `lunch` / `dinner` 的非空子集。
    - `providesStaple` / `providesProtein` 必填布尔值，用于校验午餐结构：每个午餐套餐至少要有一份主食和一份蛋白质（同一道菜可同时满足）。
-   - `cooking`：`method` 只能是 `蒸` / `煮` / `炒` / `拌` / `烤` / `煎` / `炖` / `冲泡` / `免煮` / `外买`；`timeMinutes` 是整数分钟；`steps` 3~5 步、每步 ≤30 个字，含肉蛋海鲜的菜至少一步写“熟透”；`tips` 可选，一句小提醒。
-   - `image` 写 `/images/dishes/{id}.png`；`stampImage` 可选，写 `/images/stamps/{id}.png`，存在时优先用作印章图。
+   - `ingredients` 至少一项，`grams` 必须大于 0，同一道菜内 `ingredientId` 不能重复；引用的食材必须已存在。
+   - `cooking`：`method` 只能是 `蒸` / `煮` / `炒` / `拌` / `烤` / `煎` / `炖` / `冲泡` / `免煮` / `外买`；`timeMinutes` 是整数分钟；`steps` 3~5 步、每步 ≤30 个字，含肉蛋海鲜的菜至少一步写“熟透”，`method` 为 `外买` 时至少一步写“复热”或“加热”；`tips` 可选，写一句小提醒。
+   - `image` 必须严格写成 `/images/dishes/{id}.png`；`stampImage` 可选，写 `/images/stamps/{id}.png`，存在时优先用作印章图。
    - `tip` 可选，一句话展示在抽卡结果里。
+   - 官方菜的 JSON 只允许上面这些字段（`data.test.ts` 会拒绝多余键）。`emoji` / `imageId` / `isCustom` / `archived` 等是自制菜的运行时字段，不要写进 `dishes.json`；图片缺失时由 `dishEmoji.ts` 兜底。
 
 2. **`src/data/ingredients.json`**：用到的食材若不存在，先加进 `ingredients`。字段固定为 `id`（唯一且稳定）、`name`（展示名）、`kcalPer100g`（每 100 克热量，0~900 的整数或小数）。
 
@@ -122,13 +133,15 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
 
 4. **`src/data/combos.json`**：把新菜至少放进一个套餐。每项字段为：
    - `id`：唯一且稳定；
-   - `name`：套餐展示名；
+   - `name`：套餐展示名，同一餐次池内不能与已有套餐重名，也不能部件组合完全相同；
    - `meals`：`breakfast` / `lunch` / `dinner` 的非空子集；
-   - `components`：菜品 `id` 组成的数组，1~4 个，每道菜都要包含套餐的餐次。
+   - `components`：菜品 `id` 组成的数组，1~4 个且不能重复，每道菜都要支持套餐的每个餐次；
+   - `tip`：可选，一句展示文案；
+   - `rarity`：一般省略。它由部件里最高的菜品稀有度推导；即使写了也必须等于该最高值，含 UR 部件时强制为 UR。
 
-   稀有度**不在** `combos.json` 手填，由部件里最高的菜品稀有度推导；UR 菜品只出现在 UR 套餐里。
+   数据测试还会检查：早餐专属菜只能出现在早餐套餐；每个午餐套餐至少有一份主食和一份蛋白质；水果 / 饮品 / 甜点不能单独构成单部件套餐；每个餐次至少 12 个套餐；UR 套餐最多 3 个；每道菜至少被一个套餐覆盖。
 
-5. **`src/data/data.test.ts`**：更新数量断言。当前为 94 道菜、86 种食材、68 个套餐，菜品稀有度分布 R44 / SR35 / SSR12 / UR3；新增后同步修改，否则测试会失败。
+5. **`src/data/data.test.ts` / `combos.test.ts`**：更新数量断言。当前为 94 道菜、86 种食材、68 个套餐；菜品稀有度分布 R44 / SR35 / SSR12 / UR3，套餐稀有度分布 R18 / SR35 / SSR12 / UR3，早餐 17 / 午餐 32 / 晚餐 19。新增后同步修改，否则测试会失败。
 
 6. 图鉴会自动多出一格，不需要改页面组件。
 
@@ -171,7 +184,11 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
 
 | 想改什么 | 改哪里 |
 | --- | --- |
-| 稀有度概率 | `RARITY_WEIGHTS`（四项总和必须为 100） |
+| 主题列表 / 默认主题 | `THEME_IDS`、`DEFAULT_THEME`（新增主题的完整步骤见 2.1） |
+| 稀有度顺序 | `RARITY_ORDER`（抽卡池与套餐稀有度推导共用） |
+| 稀有度概率 | `RARITY_WEIGHTS`（四项总和必须为 100，测试会校验） |
+| 套餐标准份热量区间 | `mealKcalRange`（`mealRules.test.ts` 用它校验菜品组合；UR 套餐豁免上限，下限对所有套餐生效） |
+| 云同步限额与节奏 | `SYNC`（请求体 / 单批条数 / 限流 / 服务端快照保留 / 图片体积 / 自动同步防抖 / 重试间隔 / 轮换宽限 / 时钟容差） |
 | 部件重抽是否扣一次抽卡并参与保底 | `componentRedrawCostsDraw`（`true` 时按一次正式抽取计费、计保底；`false` 时免费且不改变保底） |
 | 自制菜可选的稀有度 | `customDishAllowedRarities`（默认 `['R', 'SR']`，表单选项与图鉴一起生效） |
 | 时间轴内联印章上限（超出显示 `+N`） | `STAMP_DISPLAY.maxInline` |
@@ -195,9 +212,10 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
 
 - 业务代码只通过 `src/storage` 的端口读写，禁止直接调用 `localStorage` 或 `IndexedDB`：`StorageAdapter` 管 JSON，`BinaryStorageAdapter` 管图片，`AppStorage` 门面同时实现两者，业务侧只 import `storage` / `imageStorage`。
 - `LocalStorageAdapter` 的键前缀是 `diet-diary:`，主数据键是 `app-data`，当前 `schemaVersion = 6`。测试只使用 `test_diet-diary:`，开发种子只使用 `dev_diet-diary:`，二者都不会碰正式键。
+- 云同步的同步码、设备 id、拉取游标与待推送队列放在独立前缀 `diet-diary-sync:`（开发 / 测试同理），只在本机。导出备份、本地快照和「清空数据」都不会带走它；反过来，清理浏览器站点数据会连同步码一起丢失，详见第 8 节。
 - 打卡记录是**追加型事件**：`checkinEvents` 是唯一事实来源（每次正式打卡按菜品追加一条，同日重复打卡就是多条），`stamps` 只是由事件推导的缓存（次数 / 等级 / 日期）。事件只增不改，后续云同步用它做并集合并；`stamps` 不再作为独立写入口。
 - 自制菜图片存在 `IndexedDB`（库 `diet-diary`，store `images`），主数据只在 `customDishes`、部件快照等处保存 `imageId`（`img:<uuid>`）。渲染时按需读取并转成 object URL，组件卸载即回收。
-- 本地快照存在独立 `IndexedDB`（库 `diet-diary-snapshots`，store `meta` / `payloads`），保存 raw 存档与相关图片，保留最近 10 份。升级、清空、导入、恢复、清除档案前都会自动创建；快照写失败时破坏性操作直接中止。
+- 本地快照存在独立 `IndexedDB`（库 `diet-diary-snapshots`，store `meta` / `payloads`），保存 raw 存档与相关图片，保留最近 10 份。升级、清空、导入、恢复、清除档案、云同步合并 / 云端覆盖本机前都会自动创建；快照写失败时破坏性操作直接中止。
 - 图片写入顺序为「先图后数据」；换图时新图写入成功、数据保存成功后才删除旧图，且只有确认没有任何地方引用时才删，避免历史破图。
 - 每餐保存的是**套餐快照**：候选套餐、选中套餐、每个部件的来源（套餐 / 重抽 / 手动 / 自定义）、克数、勾选与舍弃状态。历史记录不依赖当前菜品库，改菜谱或归档都不会改变旧记录。
 - 旧存档迁移（v1 → v2）：
@@ -230,10 +248,30 @@ npm run test:api          # 云同步接口测试（本地启动，绝不连线�
   - **清空数据 / 清除档案**：先弹出说明弹窗二次确认，执行前自动创建快照；清空后回到游客状态的今日页，仍可从快照恢复。
 - 数据自愈（先读后写，任何异常都不会用默认值覆盖原数据）：
   - 启动时先读原始字符串：没有数据才算全新用户，落一次空存档。
-  - 当前版本（v5）数据只做内存规范化，不回写磁盘；启动不会改变已有 `diet-diary:app-data` 的字节。
+  - 当前版本（v6）数据只做内存规范化，不回写磁盘；启动不会改变已有 `diet-diary:app-data` 的字节。
   - 不是合法 JSON 或结构损坏 → 原始值备份到 `app-data:corrupt-backup`（实际键 `diet-diary:app-data:corrupt-backup`），进入恢复页而不是空白手帐；可重新读取、下载原始数据或从快照恢复。
   - 数据版本高于当前应用 → 进入恢复页，只提供重新读取和下载原始数据，避免旧版本覆盖新数据。
 - 跨天按本地日期键切换；时钟回拨会切回对应日期的历史记录，不会删除任何一天。抽卡券只在当天有效。
+
+### 备份与恢复
+
+| 场景 | 用什么 | 说明 |
+| --- | --- | --- |
+| 换浏览器 / 换设备（未开云同步） | 导出备份 → 新设备导入 | 含完整存档与被引用图片；导入会覆盖目标设备，导入前自动快照 |
+| 误清空 / 误导入 / 想回到升级前 | 设置 → 数据备份 → 本地快照 | 最近 10 份；恢复前会再自动创建一份当前状态快照 |
+| 云同步合并或云端覆盖之前 | 本地快照（原因标记「云同步合并前 / 云端覆盖本机前」） | 恢复后同步会进入「需要确认」，由你决定以哪边为准 |
+| 云端每日备份 | 服务端 D1 的 `snapshots` / `snapshot_images` | 每个用户每天 1 份，保留最近 14 份；目前没有恢复 UI |
+| 同步码 | 不在任何备份里 | 只存本机 `diet-diary-sync:`；丢失后无法从服务器找回 |
+
+### 新增一版数据迁移
+
+1. 把 `src/storage/appData.ts` 的 `APP_DATA_SCHEMA_VERSION` 加 1，并在迁移链里补上 `N → N+1`。
+2. 迁移写成纯函数：`schemaVersion >= N+1` 时原样返回（最好返回同一引用），对缺失字段宽容、绝不抛错。
+3. 逐层 `spread` 保留未知字段；不确定的新字段给安全默认值，不要删旧字段。
+4. 必须幂等：连续执行两次结果相同，第二次不产生新快照。
+5. 在 `src/storage/__fixtures__/` 放一份旧版本 fixture（`app-data-vN.json`），在 `appData.test.ts` / `appData.load.test.ts` 里断言：迁移后关键数据与原值一致、未知字段保留、二次加载不重复迁移、快照记录的是旧版本号。
+6. 迁移前自动快照由现有加载流程负责（原因 `migration`，保留最近 10 份）；不要绕过它直接写 `diet-diary:app-data`。
+7. 更新本文与 `DEPLOY.md` 里的版本号，并检查 `snapshots.test.ts`、开发种子数据等对 `schemaVersion` 的断言。
 
 ---
 
@@ -291,6 +329,35 @@ npm run test:api           # 鉴权、LWW、墓碑、分页、限流、体积、
 ```
 
 `npm run dev`（5173）里的 `/api` 只在开发时代理到 `127.0.0.1:8788`；生产同源。测试与本地开发都只用本地 D1，不运行任何 `--remote` 命令，也不代表你登录 Cloudflare。
+
+### 部署与恢复
+
+完整步骤（登录、建库、迁移、手机安装、常见问题）见 [DEPLOY.md](DEPLOY.md)；这里只列命令骨架：
+
+```bash
+npx wrangler login                                             # 你自己在浏览器里授权
+npx wrangler d1 create diet-diary-sync                         # 把返回的 database_id 填进 wrangler.toml
+npx wrangler d1 migrations apply diet-diary-sync --remote      # 线上建表（不可逆）
+npm run build
+npx wrangler pages project create bento-handbook --production-branch main  # 仅首次；项目已存在则跳过
+npx wrangler pages deploy dist --project-name bento-handbook --branch main
+```
+
+- 项目名是 `bento-handbook`，网址为 `https://bento-handbook.pages.dev`；`wrangler.toml` 的 `name` 必须与 `--project-name` 一致。`*.pages.dev` 子域名创建后**不能改名**，被占用就只能换项目名并同步改配置、文档和已安装设备（换域名 = 换 origin，数据与同步码不互通）。
+- `database_id` 不是密钥；占位值（全 0 UUID）会导致部署失败（`Invalid database UUID`），部署前务必替换。
+- Git 集成可以自动构建，但**不会**执行 D1 迁移，`--remote` 那一步仍需手动做一次。
+
+恢复场景：
+
+| 场景 | 行为 |
+| --- | --- |
+| 新设备 / 浏览器清空后重新连接 | 本机为空、云端有数据 → 输入同步码后自动拉取恢复，不推送空数据 |
+| 两边都有数据 | 不写任何本地数据，由你选择「合并（推荐）」或「以云端为准」；选择前自动创建本地快照 |
+| 清空 / 导入 / 从快照恢复之后 | 同步进入「需要确认」，可「保留云端并恢复」或「用本机覆盖云端」（二次确认 + 快照）；不会自动把云端数据拉回来 |
+| 想撤回一次合并或覆盖 | 设置 → 本地快照里的「云同步合并前 / 云端覆盖本机前」快照；恢复后同步会再次要求确认 |
+| 云端被误覆盖 | 服务端每天保留一份快照（最近 14 份），目前**没有恢复 UI**，只能进 D1 控制台人工处理；能预见的操作请先导出本地备份 |
+| 同步码丢失 | 服务器只存哈希，**无法找回**；只要还有一台设备保留着码，就可以在那台设备上查看或轮换；所有设备都丢失后无法找回，也无法再轮换 |
+| 暂停 / 忘记 / 彻底删除 | 关闭同步只暂停，保留本机码与云端数据；删除本机同步码会失去云端访问权；彻底删除需在 Cloudflare 控制台删 D1 库或表（先导出备份） |
 
 ---
 
