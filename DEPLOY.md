@@ -79,13 +79,14 @@ npx wrangler d1 migrations apply diet-diary-sync --remote
 
 ```bash
 npm run build
-npx wrangler pages project create diet-diary --production-branch main
-npx wrangler pages deploy dist --project-name diet-diary --branch main
+npx wrangler pages project create bento-handbook --production-branch main
+npx wrangler pages deploy dist --project-name bento-handbook --branch main
 ```
 
 - 第一次部署前必须先 `npm run build`，`dist/` 是 `wrangler.toml` 里声明的输出目录。
-- 如果 `diet-diary` 这个项目名已被占用，换一个名字，并同步修改后面所有 `--project-name`。
-- 部署成功后会得到 `https://<项目名>.pages.dev`。以后更新只需重复 `npm run build` + `npx wrangler pages deploy ...`。
+- 项目名 `bento-handbook` 对应网址 `https://bento-handbook.pages.dev`，和 `wrangler.toml` 的 `name` 保持一致。
+- **`*.pages.dev` 子域名创建后不能改名**；如果这个名字在部署前被别人占用，只能换一个名字，并同步修改 `wrangler.toml` 的 `name` 与本文所有 `--project-name`、网址。
+- 部署成功后会得到 `https://bento-handbook.pages.dev`。以后更新只需重复 `npm run build` + `npx wrangler pages deploy ...`。
 
 也可以改用 Cloudflare 控制台的 Git 集成：构建命令填 `npm run build`，输出目录填 `dist`。
 但注意 Git 集成**不会**自动执行 D1 迁移，第 4 步仍需手动完成。
@@ -182,9 +183,9 @@ npm run dev                       # 前端 5173，/api 会代理到 127.0.0.1:87
 - [ ] 把 `database_id` 填进 `wrangler.toml`
 - [ ] `npx wrangler d1 migrations apply diet-diary-sync --remote`（不可逆，确认库名）
 - [ ] `npm run build`
-- [ ] `npx wrangler pages project create diet-diary --production-branch main`
-- [ ] `npx wrangler pages deploy dist --project-name diet-diary --branch main`
-- [ ] 手机打开 `https://diet-diary.pages.dev` 并「添加到主屏幕」
+- [ ] `npx wrangler pages project create bento-handbook --production-branch main`
+- [ ] `npx wrangler pages deploy dist --project-name bento-handbook --branch main`
+- [ ] 手机打开 `https://bento-handbook.pages.dev` 并「添加到主屏幕」
 - [ ] 设置 → 云同步 → 开启 → 复制同步码
 - [ ] 第二台设备输入同步码，按提示合并或恢复
 - [ ] 在第二台设备打卡一条，回到第一台点「立即同步」，确认两边一致
